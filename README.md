@@ -42,8 +42,8 @@ armario/
    - `Project URL` → `PUBLIC_SUPABASE_URL`
    - `anon public` key → `PUBLIC_SUPABASE_ANON_KEY`
 4. En **Authentication → URL Configuration**:
-   - **Site URL**: `https://TU-USUARIO.github.io/` (o `https://TU-USUARIO.github.io/armario/` si el repo NO es un `.github.io`)
-   - **Redirect URLs**: añade `https://TU-USUARIO.github.io/*` (y en local `http://localhost:4321/*`)
+   - **Site URL**: `https://itskiki97.github.io/myOwnWardrobe/`
+   - **Redirect URLs**: añade `https://itskiki97.github.io/myOwnWardrobe/**` (y en local `http://localhost:4321/*`)
 
 ### 2. Variables de entorno en local
 
@@ -76,7 +76,7 @@ astro dev stop
    git add .
    git commit -m "Mi Armario: primera versión"
    git branch -M main
-   git remote add origin https://github.com/TU-USUARIO/armario.git
+   git remote add origin https://github.com/ItsKiKi97/myOwnWardrobe.git
    git push -u origin main
    ```
 
@@ -86,7 +86,7 @@ astro dev stop
    - `PUBLIC_SUPABASE_ANON_KEY`
    (son dos valores públicos por diseño; por eso van como Variables y no como Secrets)
 4. El workflow `.github/workflows/deploy.yml` compila y publica solo. La URL sale en
-   **Settings → Pages** (algo así como `https://TU-USUARIO.github.io/armario/`).
+   **Settings → Pages** (actualmente `https://itskiki97.github.io/myOwnWardrobe/`).
 5. Recuerda dejar esa URL en el **Site URL / Redirect URLs** de Supabase (paso 1.4).
 
 > La `base` (subcarpeta) se calcula sola en `astro.config.mjs` a partir del nombre del
