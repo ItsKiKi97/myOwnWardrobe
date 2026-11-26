@@ -1,0 +1,139 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+
+const base = import.meta.env.BASE_URL;
+const href = (path: string) => `${base}${path}`;
+---
+
+<Layout title="Inicio">
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">TU ESPACIO PERSONAL</div>
+      <h1>Bienvenido de nuevo</h1>
+      <p>Organiza tu ropa, crea combinaciones y encuentra tu estilo en un solo lugar.</p>
+    </div>
+    <a href={href('armario/')} class="primary-btn">
+      <Icon name="plus" size={16} /> Añadir prenda
+    </a>
+  </div>
+
+  <section class="welcome-banner">
+    <div>
+      <div class="banner-kicker">MYOWNWARDROBE</div>
+      <h2>Tu closet,<br />tu estilo.</h2>
+      <p>Sube tus prendas, guarda tus looks favoritos y tenlo todo siempre a mano.</p>
+      <a href={href('armario/')} class="light-btn">
+        Ir a mi armario <Icon name="arrow" size={15} />
+      </a>
+    </div>
+    <div class="banner-art" aria-hidden="true">
+      <div class="art-circle"></div>
+      <div class="art-shirt"><Icon name="shirt" size={138} /></div>
+      <div class="art-caption">YOUR STYLE<br />YOUR RULES</div>
+    </div>
+  </section>
+
+  <section class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon"><Icon name="shirt" size={19} /></div>
+      <div><strong id="stat-prendas">0</strong><span>Prendas</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><Icon name="layers" size={19} /></div>
+      <div><strong id="stat-outfits">0</strong><span>Outfits</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><Icon name="sparkles" size={19} /></div>
+      <div><strong id="stat-categorias">0</strong><span>Categorías</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><Icon name="camera" size={19} /></div>
+      <div><strong id="stat-fotos">0</strong><span>Con foto</span></div>
+    </div>
+  </section>
+
+  <section class="section-block">
+    <div class="section-head">
+      <div>
+        <h2>Tus últimas prendas</h2>
+        <p>Un vistazo rápido a lo que más has añadido</p>
+      </div>
+      <a href={href('armario/')} class="text-btn">Ver todo <Icon name="arrow" size={14} /></a>
+    </div>
+    <div class="garment-grid" id="recent"></div>
+    <div class="empty-state" id="recent-empty">
+      <span class="empty-icon"><Icon name="hanger" size={23} /></span>
+      <h3>Tu armario está esperando</h3>
+      <p>Añade tu primera prenda para empezar a construir tu estilo. Solo necesitas una foto y un nombre.</p>
+      <a href={href('armario/')} class="primary-btn"><Icon name="plus" size={15} /> Añadir prenda</a>
+    </div>
+  </section>
+
+  <section class="feature-strip">
+    <span class="feature-icon"><Icon name="sparkles" size={20} /></span>
+    <div>
+      <b>¿No sabes qué ponerte hoy?</b>
+      <span>Selecciona varias prendas y guarda la combinación perfecta.</span>
+    </div>
+    <a href={href('outfits/')} class="outline-btn">Crear un outfit <Icon name="arrow" size={14} /></a>
+  </section>
+
+  <script>
+    import { CATEGORIAS, getCurrentUser, type Categoria, type Prenda } from '../lib/supabase';
+    import { esc, fetchOutfits, fetchPrendas } from '../lib/wardrobe';
+
+    const EMOJI: Record<Categoria, string> = {
+      superior: '👕',
+      inferior: '👖',
+      abrigo: '🧥',
+      calzado: '👟',
+      accesorio: '🎒',
+    };
+    const labelDe = (id: string) => CATEGORIAS.find((c) => c.id === id)?.label ?? id;
+    const text = (id: string, value: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+
+    const card = (p: Prenda) => `
+      <article class="garment-card">
+        <div class="garment-photo">
+          ${
+            p.foto_url
+              ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
+              : `<div class="photo-placeholder">${EMOJI[p.categoria] ?? '👕'}<span>SIN FOTO</span></div>`
+          }
+        </div>
+        <div class="garment-details">
+          <div><h3>${esc(p.nombre)}</h3><span>${esc(labelDe(p.categoria))}</span></div>
+          <div class="garment-meta">
+            ${p.color ? `<span>${esc(p.color)}</span>` : ''}
+            ${p.temporada ? `<span>${esc(p.temporada)}</span>` : ''}
+          </div>
+        </div>
+      </article>`;
+
+    (async () => {
+      const user = await getCurrentUser();
+      if (!user) return;
+      try {
+        const [prendas, outfits] = await Promise.all([fetchPrendas(user.id), fetchOutfits(user.id)]);
+        text('stat-prendas', String(prendas.length));
+        text('stat-outfits', String(outfits.length));
+        text('stat-categorias', String(new Set(prendas.map((p) => p.categoria)).size));
+        text('stat-fotos', String(prendas.filter((p) => p.foto_url).length));
+
+        const grid = document.getElementById('recent');
+        const empty = document.getElementById('recent-empty');
+        if (grid && empty) {
+          grid.innerHTML = prendas.slice(0, 4).map(card).join('');
+          grid.classList.toggle('hidden', prendas.length === 0);
+          empty.classList.toggle('hidden', prendas.length > 0);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    })();
+  </script>
+</Layout>

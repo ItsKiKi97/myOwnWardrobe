@@ -1,0 +1,154 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { supabaseConfigured } from '../lib/supabase';
+---
+
+<Layout title="Entrar">
+  <div class="stylist-page">
+    <div class="auth-modal" style="margin:0 auto">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">MYOWNWARDROBE</div>
+          <h2>Tu cuenta</h2>
+        </div>
+        <span class="feature-icon"><Icon name="user" size={20} /></span>
+      </div>
+
+      <div class="auth-content">
+        {
+          !supabaseConfigured && (
+            <div class="setup-note">
+              <b>Falta configurar Supabase</b>
+              <p>Copia <code>.env.example</code> como <code>.env</code> con tus claves y reinicia el servidor.</p>
+            </div>
+          )
+        }
+
+        <p>Entra para sincronizar tus prendas y tus outfits en todos tus dispositivos.</p>
+
+        <div style="display:flex;gap:8px">
+          <button id="tab-login" type="button" class="light-btn" style="flex:1">Entrar</button>
+          <button id="tab-signup" type="button" class="outline-btn" style="flex:1">Crear cuenta</button>
+        </div>
+
+        <form id="auth-form" class="save-form" novalidate>
+          <label>
+            <span>EMAIL</span>
+            <input id="email" name="email" type="email" required autocomplete="email" placeholder="tu@email.com" />
+          </label>
+          <label>
+            <span>CONTRASEÑA</span>
+            <input id="password" name="password" type="password" required minlength="6" autocomplete="current-password" placeholder="Mínimo 6 caracteres" />
+          </label>
+          <p id="message" class="hidden"></p>
+          <button id="submit" type="submit" class="primary-btn full">Entrar</button>
+        </form>
+
+        <button id="reset" type="button" class="text-btn centered hidden">¿Has olvidado la contraseña?</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { getSupabase, supabaseConfigured } from '../lib/supabase';
+
+    type Mode = 'login' | 'signup';
+    let mode: Mode = 'login';
+
+    const tabLogin = document.getElementById('tab-login');
+    const tabSignup = document.getElementById('tab-signup');
+    const form = document.getElementById('auth-form') as HTMLFormElement | null;
+    const submit = document.getElementById('submit') as HTMLButtonElement | null;
+    const message = document.getElementById('message');
+    const reset = document.getElementById('reset') as HTMLButtonElement | null;
+    const password = document.getElementById('password') as HTMLInputElement | null;
+
+    const showMessage = (text: string, kind: 'ok' | 'error') => {
+      if (!message) return;
+      message.textContent = text;
+      message.className = `msg ${kind}`;
+    };
+
+    const friendlyError = (raw: string) => {
+      const text = raw.toLowerCase();
+      if (text.includes('rate limit') || text.includes('too many requests')) {
+        return 'Supabase ha agotado la cuota de emails gratis. Desactiva «Confirm email» en Authentication → Providers → Email y vuelve a intentarlo (o espera 1 hora).';
+      }
+      if (text.includes('already registered')) return 'Ese email ya tiene cuenta. Usa «Entrar» en su lugar.';
+      if (text.includes('invalid login credentials')) return 'Email o contraseña incorrectos.';
+      if (text.includes('email not confirmed')) return 'Confirma tu email o desactiva «Confirm email» en Supabase → Authentication → Providers → Email.';
+      return raw;
+    };
+
+    const setMode = (next: Mode) => {
+      mode = next;
+      tabLogin!.className = mode === 'login' ? 'light-btn' : 'outline-btn';
+      tabSignup!.className = mode === 'signup' ? 'light-btn' : 'outline-btn';
+      if (submit) submit.textContent = mode === 'login' ? 'Entrar' : 'Crear cuenta';
+      reset?.classList.toggle('hidden', mode !== 'login');
+      if (password) password.autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+    };
+
+    tabLogin?.addEventListener('click', () => setMode('login'));
+    tabSignup?.addEventListener('click', () => setMode('signup'));
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!supabaseConfigured) return showMessage('Supabase no está configurado.', 'error');
+
+      const email = (document.getElementById('email') as HTMLInputElement)?.value.trim() ?? '';
+      const pass = password?.value ?? '';
+      if (!email || pass.length < 6) return showMessage('Introduce un email y una contraseña de 6 caracteres o más.', 'error');
+
+      if (submit) {
+        submit.disabled = true;
+        submit.textContent = 'Un momento…';
+      }
+
+      const supabase = getSupabase();
+      const redirect = window.location.origin + import.meta.env.BASE_URL;
+
+      if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        if (error) {
+          showMessage(friendlyError(error.message), 'error');
+        } else {
+          window.location.href = `${import.meta.env.BASE_URL}armario/`;
+          return;
+        }
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password: pass,
+          options: { emailRedirectTo: redirect },
+        });
+        if (error) {
+          showMessage(friendlyError(error.message), 'error');
+        } else if (data.session) {
+          window.location.href = `${import.meta.env.BASE_URL}armario/`;
+          return;
+        } else {
+          showMessage('¡Cuenta creada! Revisa tu email para confirmar el registro.', 'ok');
+        }
+      }
+
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = mode === 'login' ? 'Entrar' : 'Crear cuenta';
+      }
+    });
+
+    reset?.addEventListener('click', async () => {
+      const email = (document.getElementById('email') as HTMLInputElement)?.value.trim() ?? '';
+      if (!supabaseConfigured) return showMessage('Supabase no está configurado.', 'error');
+      if (!email) return showMessage('Escribe tu email arriba primero.', 'error');
+      const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + import.meta.env.BASE_URL,
+      });
+      showMessage(error ? friendlyError(error.message) : 'Te hemos enviado un email para restablecer la contraseña.', error ? 'error' : 'ok');
+    });
+
+    setMode('login');
+  </script>
+</Layout>

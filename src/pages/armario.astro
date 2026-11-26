@@ -1,0 +1,265 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
+---
+
+<Layout title="Mi armario">
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">COLECCIÓN</div>
+      <h1>Mi armario</h1>
+      <p>Todas tus prendas, organizadas y listas para combinar.</p>
+    </div>
+    <button id="toggle-form" type="button" class="primary-btn">
+      <Icon name="plus" size={16} /> Nueva prenda
+    </button>
+  </div>
+
+  <p id="error" class="hidden msg error"></p>
+
+  <div class="toolbar">
+    <label class="search-box">
+      <Icon name="search" size={16} />
+      <input id="search" type="search" placeholder="Buscar por nombre, color o temporada…" />
+    </label>
+    <div class="filter-select">
+      <select id="filter-cat">
+        <option value="todas">Todas las categorías</option>
+        {CATEGORIAS.map((c) => <option value={c.id}>{c.label}</option>)}
+      </select>
+      <Icon name="chevron" size={14} />
+    </div>
+  </div>
+
+  <p id="counter" class="result-line">Cargando…</p>
+
+  <div class="garment-grid" id="grid"></div>
+
+  <div class="empty-state hidden" id="empty">
+    <span class="empty-icon"><Icon name="hanger" size={23} /></span>
+    <h3>Todavía no hay prendas</h3>
+    <p>Pulsa «Nueva prenda» para añadir la primera. Una foto y un nombre son suficientes para empezar.</p>
+    <button id="empty-add" type="button" class="primary-btn"><Icon name="plus" size={15} /> Añadir prenda</button>
+  </div>
+
+  <div class="modal-backdrop hidden" id="modal">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">NUEVA PRENDA</div>
+          <h2>Añadir al armario</h2>
+        </div>
+        <button id="close-modal" type="button" class="icon-btn" aria-label="Cerrar">
+          <Icon name="close" size={16} />
+        </button>
+      </div>
+
+      <form id="prenda-form">
+        <div class="modal-body">
+          <label class="photo-upload">
+            <Icon name="camera" size={22} />
+            <b>Haz clic para subir una foto</b>
+            <span>JPG o PNG · se comprime automáticamente</span>
+            <img id="photo-preview" class="hidden" alt="Vista previa de la prenda" />
+            <input id="foto" type="file" accept="image/*" />
+          </label>
+
+          <div class="form-grid">
+            <label class="field">
+              <span>NOMBRE</span>
+              <input id="nombre" type="text" required maxlength="60" placeholder="Camisa blanca de lino" />
+            </label>
+            <label class="field">
+              <span>CATEGORÍA</span>
+              <select id="categoria">
+                {CATEGORIAS.map((c) => <option value={c.id}>{c.label}</option>)}
+              </select>
+            </label>
+            <label class="field">
+              <span>COLOR</span>
+              <input id="color" type="text" maxlength="30" placeholder="Azul marino" />
+            </label>
+            <label class="field">
+              <span>TEMPORADA</span>
+              <select id="temporada">
+                <option value="">Sin especificar</option>
+                {TEMPORADAS.map((t) => <option value={t}>{t}</option>)}
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="cancel" type="button" class="outline-btn">Cancelar</button>
+          <button id="save" type="submit" class="primary-btn">Guardar prenda</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    import { CATEGORIAS, requireUser, supabaseConfigured, type Categoria, type Prenda } from '../lib/supabase';
+    import { deletePrenda, esc, fetchPrendas, insertPrenda, uploadPhoto } from '../lib/wardrobe';
+
+    const EMOJI: Record<Categoria, string> = {
+      superior: '👕',
+      inferior: '👖',
+      abrigo: '🧥',
+      calzado: '👟',
+      accesorio: '🎒',
+    };
+    const labelDe = (id: string) => CATEGORIAS.find((c) => c.id === id)?.label ?? id;
+
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    const counter = document.getElementById('counter');
+    const errorEl = document.getElementById('error');
+    const modal = document.getElementById('modal');
+    const form = document.getElementById('prenda-form') as HTMLFormElement | null;
+    const save = document.getElementById('save') as HTMLButtonElement | null;
+    const fileInput = document.getElementById('foto') as HTMLInputElement | null;
+    const preview = document.getElementById('photo-preview') as HTMLImageElement | null;
+    const searchInput = document.getElementById('search') as HTMLInputElement | null;
+    const filterSelect = document.getElementById('filter-cat') as HTMLSelectElement | null;
+
+    let prendas: Prenda[] = [];
+
+    const showError = (text: string) => {
+      if (!errorEl) return;
+      errorEl.textContent = text;
+      errorEl.classList.remove('hidden');
+      setTimeout(() => errorEl.classList.add('hidden'), 6000);
+    };
+
+    const openModal = () => {
+      modal?.classList.remove('hidden');
+      (document.getElementById('nombre') as HTMLInputElement)?.focus();
+    };
+    const closeModal = () => {
+      modal?.classList.add('hidden');
+      form?.reset();
+      if (preview) {
+        preview.src = '';
+        preview.classList.add('hidden');
+      }
+    };
+
+    document.getElementById('toggle-form')?.addEventListener('click', openModal);
+    document.getElementById('empty-add')?.addEventListener('click', openModal);
+    document.getElementById('close-modal')?.addEventListener('click', closeModal);
+    document.getElementById('cancel')?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (event) => {
+      if (event.target === modal) closeModal();
+    });
+
+    fileInput?.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (!file || !preview) return;
+      preview.src = URL.createObjectURL(file);
+      preview.classList.remove('hidden');
+    });
+
+    searchInput?.addEventListener('input', render);
+    filterSelect?.addEventListener('change', render);
+
+    const card = (p: Prenda) => `
+      <article class="garment-card">
+        <div class="garment-photo">
+          ${
+            p.foto_url
+              ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
+              : `<div class="photo-placeholder">${EMOJI[p.categoria] ?? '👕'}<span>SIN FOTO</span></div>`
+          }
+          <div class="card-actions">
+            <button type="button" data-delete="${esc(p.id)}" class="icon-btn danger" title="Eliminar prenda">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="garment-details">
+          <div><h3>${esc(p.nombre)}</h3><span>${esc(labelDe(p.categoria))}</span></div>
+          <div class="garment-meta">
+            ${p.color ? `<span>${esc(p.color)}</span>` : ''}
+            ${p.temporada ? `<span>${esc(p.temporada)}</span>` : ''}
+          </div>
+        </div>
+      </article>`;
+
+    function render() {
+      if (!grid || !empty || !counter) return;
+      const cat = filterSelect?.value ?? 'todas';
+      const q = (searchInput?.value ?? '').toLowerCase().trim();
+      const visibles = prendas.filter((p) => {
+        const porCat = cat === 'todas' || p.categoria === cat;
+        const porTexto = !q || `${p.nombre} ${p.color ?? ''} ${p.temporada ?? ''}`.toLowerCase().includes(q);
+        return porCat && porTexto;
+      });
+      grid.innerHTML = visibles.map(card).join('');
+      grid.classList.toggle('hidden', visibles.length === 0);
+      empty!.classList.toggle('hidden', prendas.length > 0);
+      counter.textContent = `${visibles.length} de ${prendas.length} prendas`;
+
+      grid.querySelectorAll<HTMLButtonElement>('[data-delete]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const id = button.dataset.delete!;
+          const prenda = prendas.find((p) => p.id === id);
+          if (!prenda || !confirm(`¿Eliminar «${prenda.nombre}»?`)) return;
+          try {
+            await deletePrenda(prenda.id, prenda.foto_url);
+            prendas = prendas.filter((p) => p.id !== prenda.id);
+            render();
+          } catch (error) {
+            showError((error as Error).message);
+          }
+        });
+      });
+    }
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!supabaseConfigured) return showError('Supabase no está configurado. Revisa el archivo .env');
+
+      const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
+      const categoria = (document.getElementById('categoria') as HTMLSelectElement).value as Categoria;
+      const temporada = (document.getElementById('temporada') as HTMLSelectElement).value;
+      const color = (document.getElementById('color') as HTMLInputElement).value.trim();
+      const file = fileInput?.files?.[0];
+      if (!nombre) return showError('La prenda necesita un nombre.');
+
+      if (save) {
+        save.disabled = true;
+        save.textContent = 'Guardando…';
+      }
+
+      try {
+        const user = await requireUser();
+        const foto_url = file ? await uploadPhoto(user.id, file) : null;
+        const prenda = await insertPrenda(user.id, { nombre, categoria, color, temporada, foto_url });
+        prendas = [prenda, ...prendas];
+        closeModal();
+        if (searchInput) searchInput.value = '';
+        if (filterSelect) filterSelect.value = 'todas';
+        render();
+      } catch (error) {
+        showError((error as Error).message);
+      } finally {
+        if (save) {
+          save.disabled = false;
+          save.textContent = 'Guardar prenda';
+        }
+      }
+    });
+
+    (async () => {
+      if (!supabaseConfigured) return showError('Falta configurar Supabase: copia .env.example a .env');
+      try {
+        const user = await requireUser();
+        prendas = await fetchPrendas(user.id);
+        render();
+      } catch (error) {
+        if ((error as Error).message !== 'Sesión no iniciada') showError((error as Error).message);
+      }
+    })();
+  </script>
+</Layout>

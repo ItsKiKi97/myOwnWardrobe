@@ -1,0 +1,154 @@
+---
+import '../styles/global.css';
+import Icon from '../components/Icon.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description = 'Tu armario digital personal. Organiza prendas, crea outfits y encuentra tu estilo.' } = Astro.props;
+
+const base = import.meta.env.BASE_URL;
+const href = (path: string) => `${base}${path}`;
+const current = Astro.url.pathname.replace(base, '');
+const isActive = (path: string) => (path === '' ? current === '' || current === '/' : current.startsWith(path));
+
+const nav = [
+  { path: '', label: 'Inicio', icon: 'home' as const },
+  { path: 'armario/', label: 'Mi armario', icon: 'shirt' as const },
+  { path: 'outfits/', label: 'Outfits', icon: 'layers' as const, pill: 'NEW' },
+];
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7f6f2" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <title>MyOwnWardrobe — {title}</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <a href={href('')} class="brand">
+          <div class="brand-mark"><Icon name="hanger" size={22} /></div>
+          <span>
+            <b>MyOwnWardrobe</b>
+            <span>YOUR CLOSET, YOUR STYLE</span>
+          </span>
+        </a>
+
+        <div class="side-label">MENÚ</div>
+        <nav>
+          {
+            nav.map((item) => (
+              <a href={href(item.path)} class:list={['nav-link', isActive(item.path) && 'active']}>
+                <Icon name={item.icon} size={17} />
+                {item.label}
+                {item.pill && <span class="new-pill">{item.pill}</span>}
+              </a>
+            ))
+          }
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="sync-card">
+            <div class="sync-icon"><Icon name="cloud" size={17} /></div>
+            <span>
+              <b>Mi cuenta</b>
+              <span id="user-email">Sin iniciar sesión</span>
+            </span>
+          </div>
+          <a id="btn-login" href={href('login/')} class="nav-link">
+            <Icon name="user" size={17} /> Entrar
+          </a>
+          <button id="btn-logout" type="button" class="nav-link hidden">
+            <Icon name="logout" size={17} /> Cerrar sesión
+          </button>
+          <div class="side-foot">MYOWNWARDROBE · 2026</div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="topbar">
+          <button id="menu-toggle" type="button" class="icon-btn menu-toggle" aria-label="Abrir menú">
+            <Icon name="menu" size={18} />
+          </button>
+          <div class="breadcrumb">MyOwnWardrobe <span>/</span> <b>{title}</b></div>
+          <div class="top-actions">
+            <div class="sync-status">
+              <Icon name="check" size={16} />
+              <span id="sync-status">Modo invitado</span>
+            </div>
+            <span class="avatar" id="user-avatar">?</span>
+            <button id="btn-logout-top" type="button" class="icon-btn" title="Cerrar sesión">
+              <Icon name="logout" size={16} />
+            </button>
+          </div>
+        </header>
+
+        <div class="content">
+          <slot />
+        </div>
+
+        <footer class="footer">
+          <span>© 2026 MYOWNWARDROBE</span>
+          <span>HECHO CON ASTRO + SUPABASE</span>
+          <span>GITHUB PAGES</span>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      import { getSupabase, signOut, supabaseConfigured } from '../lib/supabase';
+
+      const emailEl = document.getElementById('user-email');
+      const loginEl = document.getElementById('btn-login');
+      const logoutEl = document.getElementById('btn-logout');
+      const logoutTopEl = document.getElementById('btn-logout-top');
+      const avatarEl = document.getElementById('user-avatar');
+      const syncEl = document.getElementById('sync-status');
+      const sidebar = document.getElementById('sidebar');
+
+      const render = (email?: string | null) => {
+        if (email) {
+          if (emailEl) emailEl.textContent = email;
+          avatarEl!.textContent = email.charAt(0).toUpperCase();
+          loginEl?.classList.add('hidden');
+          logoutEl?.classList.remove('hidden');
+          logoutTopEl?.classList.remove('hidden');
+          if (syncEl) syncEl.textContent = 'Sincronizado';
+        } else {
+          if (emailEl) emailEl.textContent = 'Sin iniciar sesión';
+          avatarEl!.textContent = '?';
+          loginEl?.classList.remove('hidden');
+          logoutEl?.classList.add('hidden');
+          logoutTopEl?.classList.add('hidden');
+          if (syncEl) syncEl.textContent = 'Modo invitado';
+        }
+      };
+
+      const doLogout = () => signOut().catch(() => {});
+      logoutEl?.addEventListener('click', doLogout);
+      logoutTopEl?.addEventListener('click', doLogout);
+
+      document.getElementById('menu-toggle')?.addEventListener('click', () => sidebar?.classList.toggle('show'));
+      document.querySelectorAll('.nav-link').forEach((link) =>
+        link.addEventListener('click', () => sidebar?.classList.remove('show'))
+      );
+
+      if (supabaseConfigured) {
+        try {
+          const supabase = getSupabase();
+          supabase.auth.getSession().then(({ data }) => render(data.session?.user.email));
+          supabase.auth.onAuthStateChange((_event, session) => render(session?.user.email));
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    </script>
+  </body>
+</html>

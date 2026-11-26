@@ -1,0 +1,276 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Outfits">
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">ESTILISMO</div>
+      <h1>Combinar outfits</h1>
+      <p>Selecciona tus prendas favoritas y crea tu próximo look.</p>
+    </div>
+    <a href={`${base}armario/`} class="primary-btn">
+      <Icon name="plus" size={16} /> Nueva prenda
+    </a>
+  </div>
+
+  <p id="error" class="hidden msg error"></p>
+
+  <div class="builder-intro">
+    <div class="builder-symbol"><Icon name="sparkles" size={20} /></div>
+    <div>
+      <b>Toca las prendas para añadirlas al look</b>
+      <span>Las que elijas aparecerán en la vista previa. Luego solo ponle nombre y guarda.</span>
+    </div>
+  </div>
+
+  <div class="builder-layout">
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Tus prendas</h2>
+          <p id="counter">Cargando…</p>
+        </div>
+      </div>
+      <div class="picker-grid" id="picker"></div>
+      <div class="empty-state hidden" id="empty">
+        <span class="empty-icon"><Icon name="hanger" size={23} /></span>
+        <h3>Aún no hay prendas</h3>
+        <p>Primero añade algunas prendas a tu armario para poder combinarlas.</p>
+        <a href={`${base}armario/`} class="primary-btn">Ir al armario <Icon name="arrow" size={14} /></a>
+      </div>
+    </section>
+
+    <aside class="outfit-preview">
+      <div class="preview-head">
+        <span>VISTA PREVIA</span>
+        <span id="selected-count">0 PRENDAS</span>
+      </div>
+      <div class="preview-collage" id="preview"></div>
+      <form class="save-form" id="save-form">
+        <label>
+          <span>NOMBRE DEL LOOK</span>
+          <input id="outfit-name" type="text" maxlength="50" placeholder="Viernes de oficina" />
+        </label>
+        <button id="save-outfit" type="submit" class="primary-btn full" disabled>Guardar outfit</button>
+      </form>
+    </aside>
+  </div>
+
+  <section class="section-block" style="margin-top:35px">
+    <div class="section-head">
+      <div>
+        <h2>Mis outfits</h2>
+        <p>Tus combinaciones guardadas</p>
+      </div>
+    </div>
+    <div class="outfit-grid" id="list"></div>
+    <div class="empty-state hidden" id="no-outfits">
+      <span class="empty-icon"><Icon name="layers" size={23} /></span>
+      <h3>Sin outfits todavía</h3>
+      <p>Selecciona unas prendas a la izquierda y guarda tu primer look.</p>
+    </div>
+  </section>
+
+  <p id="saved-msg" class="hidden msg ok"></p>
+
+  <script>
+    import { requireUser, supabaseConfigured, type Outfit, type Prenda } from '../lib/supabase';
+    import { deleteOutfit, esc, fetchOutfits, fetchPrendas, insertOutfit } from '../lib/wardrobe';
+
+    const picker = document.getElementById('picker');
+    const empty = document.getElementById('empty');
+    const counter = document.getElementById('counter');
+    const preview = document.getElementById('preview');
+    const selectedCount = document.getElementById('selected-count');
+    const nameInput = document.getElementById('outfit-name') as HTMLInputElement | null;
+    const saveForm = document.getElementById('save-form') as HTMLFormElement | null;
+    const saveButton = document.getElementById('save-outfit') as HTMLButtonElement | null;
+    const savedMsg = document.getElementById('saved-msg');
+    const listEl = document.getElementById('list');
+    const noOutfits = document.getElementById('no-outfits');
+    const errorEl = document.getElementById('error');
+
+    let prendas: Prenda[] = [];
+    let outfits: Outfit[] = [];
+    const seleccion = new Set<string>();
+
+    const showError = (text: string) => {
+      if (!errorEl) return;
+      errorEl.textContent = text;
+      errorEl.classList.remove('hidden');
+      setTimeout(() => errorEl.classList.add('hidden'), 6000);
+    };
+
+    const showSaved = (text: string) => {
+      if (!savedMsg) return;
+      savedMsg.textContent = text;
+      savedMsg.classList.remove('hidden');
+      setTimeout(() => savedMsg.classList.add('hidden'), 4000);
+    };
+
+    const renderPicker = () => {
+      if (!picker || !empty || !counter) return;
+      picker.innerHTML = prendas
+        .map((p) => {
+          const activa = seleccion.has(p.id);
+          return `
+          <button type="button" data-pick="${esc(p.id)}" class="picker-item${activa ? ' picked' : ''}">
+            <div class="picker-image">
+              ${
+                p.foto_url
+                  ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
+                  : `<span style="font-size:32px">${p.categoria === 'calzado' ? '👟' : p.categoria === 'inferior' ? '👖' : p.categoria === 'abrigo' ? '🧥' : p.categoria === 'accesorio' ? '🎒' : '👕'}</span>`
+              }
+              <span class="pick-check">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m5 12 4 4L19 6"/></svg>
+              </span>
+            </div>
+            <b>${esc(p.nombre)}</b>
+            <span>${esc(p.categoria)}</span>
+          </button>`;
+        })
+        .join('');
+
+      empty.classList.toggle('hidden', prendas.length > 0);
+      counter.textContent = `${prendas.length} prendas disponibles`;
+
+      picker.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const id = button.dataset.pick!;
+          if (seleccion.has(id)) seleccion.delete(id);
+          else seleccion.add(id);
+          renderPicker();
+          renderPreview();
+        });
+      });
+    };
+
+    const renderPreview = () => {
+      if (!preview || !saveButton || !selectedCount) return;
+      const elegidas = prendas.filter((p) => seleccion.has(p.id)).slice(0, 4);
+      preview.innerHTML =
+        elegidas.length === 0
+          ? `<div class="preview-empty">
+               <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
+               <span>Sin prendas seleccionadas</span>
+               <small>Toca una prenda para verla aquí</small>
+             </div>`
+          : elegidas
+              .map(
+                (p) => `
+              <div class="preview-piece">
+                ${
+                  p.foto_url
+                    ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
+                    : '<div style="font-size:30px">👕</div>'
+                }
+                <span>${esc(p.nombre)}</span>
+              </div>`
+              )
+              .join('');
+
+      selectedCount.textContent = `${seleccion.size} PRENDA${seleccion.size === 1 ? '' : 'S'}`;
+      saveButton.disabled = seleccion.size === 0;
+    };
+
+    const renderOutfits = () => {
+      if (!listEl || !noOutfits) return;
+      const porId = new Map(prendas.map((p) => [p.id, p]));
+      listEl.innerHTML = outfits
+        .map((o) => {
+          const items = o.prenda_ids.map((id) => porId.get(id)).filter((p): p is Prenda => Boolean(p));
+          const visibles = items.slice(0, 4);
+          const fecha = new Date(o.creado_en).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+          return `
+          <article class="outfit-card">
+            <div class="outfit-collage">
+              ${visibles
+                .map(
+                  (p) => `
+                <div class="outfit-thumb">
+                  ${
+                    p.foto_url
+                      ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
+                      : '<span style="font-size:24px">👕</span>'
+                  }
+                </div>`
+                )
+                .join('')}
+              ${items.length > 4 ? `<span class="more-count">+${items.length - 4}</span>` : ''}
+            </div>
+            <div class="outfit-info">
+              <div><h3>${esc(o.nombre)}</h3><span>${o.prenda_ids.length} prendas · ${fecha}</span></div>
+              <div class="outfit-actions">
+                <button type="button" data-del-outfit="${esc(o.id)}" class="icon-btn danger" title="Eliminar outfit">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+                </button>
+              </div>
+            </div>
+          </article>`;
+        })
+        .join('');
+
+      noOutfits.classList.toggle('hidden', outfits.length > 0);
+
+      listEl.querySelectorAll<HTMLButtonElement>('[data-del-outfit]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const id = button.dataset.delOutfit!;
+          const outfit = outfits.find((o) => o.id === id);
+          if (!outfit || !confirm(`¿Eliminar el outfit «${outfit.nombre}»?`)) return;
+          try {
+            await deleteOutfit(id);
+            outfits = outfits.filter((o) => o.id !== id);
+            renderOutfits();
+          } catch (error) {
+            showError((error as Error).message);
+          }
+        });
+      });
+    };
+
+    saveForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (seleccion.size === 0) return;
+      const nombre = nameInput?.value.trim() || `Look del ${new Date().toLocaleDateString('es-ES')}`;
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent = 'Guardando…';
+      }
+      try {
+        const user = await requireUser();
+        const outfit = await insertOutfit(user.id, nombre, [...seleccion]);
+        outfits = [outfit, ...outfits];
+        seleccion.clear();
+        if (nameInput) nameInput.value = '';
+        renderPicker();
+        renderPreview();
+        renderOutfits();
+        showSaved('Outfit guardado ✅');
+      } catch (error) {
+        showError((error as Error).message);
+      } finally {
+        if (saveButton) {
+          saveButton.textContent = 'Guardar outfit';
+          saveButton.disabled = seleccion.size === 0;
+        }
+      }
+    });
+
+    (async () => {
+      if (!supabaseConfigured) return showError('Falta configurar Supabase: copia .env.example a .env');
+      try {
+        const user = await requireUser();
+        [prendas, outfits] = await Promise.all([fetchPrendas(user.id), fetchOutfits(user.id)]);
+        renderPicker();
+        renderPreview();
+        renderOutfits();
+      } catch (error) {
+        if ((error as Error).message !== 'Sesión no iniciada') showError((error as Error).message);
+      }
+    })();
+  </script>
+</Layout>
