@@ -35,8 +35,8 @@
 .dm-row-head b{font-size:10px;letter-spacing:1.3px;color:var(--ink)}
 .dm-row-head small{font-size:10px;color:var(--muted)}
 .dm-row-count{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;flex-shrink:0}
-.dm-track{position:relative;display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 4px;padding:5px 4px 12px;scrollbar-width:thin;border-radius:10px;background:#f3f2ec}
-.dm-card{flex:0 0 132px;scroll-snap-align:center;border:1px solid transparent;border-radius:9px;background:transparent;padding:5px;text-align:center;color:var(--ink);min-width:0;transition:transform .16s,border-color .16s,background .16s}
+.dm-track{display:flex;flex-wrap:wrap;gap:10px;padding:9px;border-radius:10px;background:#f3f2ec}
+.dm-card{flex:0 1 132px;border:1px solid transparent;border-radius:9px;background:transparent;padding:5px;text-align:center;color:var(--ink);min-width:0;transition:transform .16s,border-color .16s,background .16s}
 .dm-card:hover{transform:translateY(-2px)}
 .dm-card.picked{border-color:var(--olive);background:#e9ebdf;box-shadow:0 3px 10px #00000012}
 .dm-card-photo{display:grid;place-items:center;height:132px;border-radius:7px;background:#eceae2;overflow:hidden;color:#8b8d83}

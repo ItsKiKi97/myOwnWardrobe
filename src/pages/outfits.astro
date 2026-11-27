@@ -10,7 +10,7 @@ const base = import.meta.env.BASE_URL;
     <div>
       <div class="eyebrow">ESTILISMO</div>
       <h1>Dress Me</h1>
-      <p>Desliza las filas, toca una prenda o pulsa «Mezclar» para descubrir nuevos looks.</p>
+      <p>Toca una prenda en cada fila o pulsa «Mezclar» para descubrir nuevos looks.</p>
     </div>
     <a href={`${base}armario/`} class="primary-btn">
       <Icon name="plus" size={16} /> Nueva prenda
@@ -234,10 +234,6 @@ const base = import.meta.env.BASE_URL;
           ? opciones.map(tarjeta).join('')
           : '<span class="dm-row-empty">Sin prendas en esta fila</span>';
         if (count) count.textContent = `${opciones.length}`;
-        const elegida = track.querySelector<HTMLElement>('.dm-card.picked');
-        if (elegida) {
-          track.scrollLeft = Math.max(0, elegida.offsetLeft - track.clientWidth / 2 + elegida.offsetWidth / 2);
-        }
       });
     };
 
