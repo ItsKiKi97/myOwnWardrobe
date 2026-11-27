@@ -210,10 +210,12 @@ const nav = [
       menuClose?.addEventListener('click', () => setMenu(false));
       backdrop?.addEventListener('click', () => setMenu(false));
       document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') setMenu(false);
+        if (event.key === 'Escape' && isMobile()) setMenu(false);
       });
       document.querySelectorAll('.nav-link').forEach((link) =>
-        link.addEventListener('click', () => setMenu(false))
+        link.addEventListener('click', () => {
+          if (isMobile()) setMenu(false);
+        })
       );
 
       syncToggle();
