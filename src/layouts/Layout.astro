@@ -137,25 +137,45 @@ const nav = [
 
       const isMobile = () => window.matchMedia('(max-width: 760px)').matches;
 
+      const isExpanded = () =>
+        isMobile()
+          ? sidebar?.classList.contains('show') ?? false
+          : !document.body.classList.contains('sidebar-collapsed');
+
+      const syncToggle = () => {
+        const expanded = isExpanded();
+        menuToggle?.setAttribute('aria-expanded', String(expanded));
+        menuToggle?.setAttribute('aria-label', expanded ? 'Cerrar menú' : 'Abrir menú');
+      };
+
       const setMenu = (open: boolean) => {
-        sidebar?.classList.toggle('show', open);
-        if (sidebar) {
-          if (isMobile()) {
+        if (isMobile()) {
+          sidebar?.classList.toggle('show', open);
+          if (sidebar) {
             sidebar.style.left = open ? '0px' : '-268px';
             sidebar.style.visibility = open ? 'visible' : 'hidden';
-          } else {
-            sidebar.style.removeProperty('left');
-            sidebar.style.removeProperty('visibility');
           }
+          backdrop?.classList.toggle('hidden', !open);
+          document.body.classList.toggle('menu-open', open);
+        } else {
+          document.body.classList.toggle('sidebar-collapsed', !open);
+          document.body.classList.remove('menu-open');
+          backdrop?.classList.add('hidden');
+          sidebar?.classList.remove('show');
+          sidebar?.style.removeProperty('left');
+          sidebar?.style.removeProperty('visibility');
         }
-        backdrop?.classList.toggle('hidden', !open);
-        document.body.classList.toggle('menu-open', open);
-        menuToggle?.setAttribute('aria-expanded', String(open));
-        menuToggle?.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+        syncToggle();
       };
 
       window.addEventListener('resize', () => {
-        if (!isMobile()) setMenu(false);
+        document.body.classList.remove('menu-open');
+        document.body.classList.remove('sidebar-collapsed');
+        backdrop?.classList.add('hidden');
+        sidebar?.classList.remove('show');
+        sidebar?.style.removeProperty('left');
+        sidebar?.style.removeProperty('visibility');
+        syncToggle();
       });
 
       const render = (email?: string | null) => {
@@ -186,7 +206,7 @@ const nav = [
         applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
       );
 
-      menuToggle?.addEventListener('click', () => setMenu(!sidebar?.classList.contains('show')));
+      menuToggle?.addEventListener('click', () => setMenu(!isExpanded()));
       menuClose?.addEventListener('click', () => setMenu(false));
       backdrop?.addEventListener('click', () => setMenu(false));
       document.addEventListener('keydown', (event) => {
@@ -195,6 +215,8 @@ const nav = [
       document.querySelectorAll('.nav-link').forEach((link) =>
         link.addEventListener('click', () => setMenu(false))
       );
+
+      syncToggle();
 
       if (supabaseConfigured) {
         try {
