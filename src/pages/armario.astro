@@ -30,11 +30,15 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       </select>
       <Icon name="chevron" size={14} />
     </div>
+    <button id="canvas-toggle" type="button" class="outline-btn" aria-pressed="false">
+      <Icon name="layers" size={14} /> Vista lienzo
+    </button>
   </div>
 
   <p id="counter" class="result-line">Cargando…</p>
 
   <div class="garment-grid" id="grid"></div>
+  <p id="canvas-hint" class="canvas-hint hidden">Desliza para recorrer todas tus prendas →</p>
 
   <div class="empty-state hidden" id="empty">
     <span class="empty-icon"><Icon name="hanger" size={23} /></span>
@@ -143,6 +147,8 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
     const modalTitle = document.getElementById('modal-title');
     const quitarFondoInput = document.getElementById('quitar-fondo') as HTMLInputElement | null;
     const fotoEstado = document.getElementById('foto-estado');
+    const canvasToggle = document.getElementById('canvas-toggle') as HTMLButtonElement | null;
+    const canvasHint = document.getElementById('canvas-hint');
 
     let prendas: Prenda[] = [];
     let editingId: string | null = null;
@@ -160,6 +166,31 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       fotoEstado.textContent = text;
       fotoEstado.classList.toggle('hidden', !text);
     };
+
+    let modoLienzo = false;
+    try {
+      modoLienzo = localStorage.getItem('mow-canvas') === '1';
+    } catch {}
+
+    const applyCanvas = () => {
+      grid?.classList.toggle('canvas', modoLienzo);
+      canvasHint?.classList.toggle('hidden', !modoLienzo);
+      canvasToggle?.setAttribute('aria-pressed', String(modoLienzo));
+      if (canvasToggle) {
+        canvasToggle.innerHTML = modoLienzo
+          ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg> Vista cuadrícula'
+          : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg> Vista lienzo';
+      }
+    };
+
+    canvasToggle?.addEventListener('click', () => {
+      modoLienzo = !modoLienzo;
+      try {
+        localStorage.setItem('mow-canvas', modoLienzo ? '1' : '0');
+      } catch {}
+      applyCanvas();
+    });
+    applyCanvas();
 
     const setVal = (id: string, value: string) => {
       const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
