@@ -28,18 +28,36 @@ const nav = [
     <meta name="theme-color" content="#f7f6f2" />
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <script is:inline>
+      try {
+        var saved = localStorage.getItem('mow-theme');
+        document.documentElement.dataset.theme =
+          saved === 'dark' || saved === 'light'
+            ? saved
+            : matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+      } catch (e) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    </script>
     <title>MyOwnWardrobe — {title}</title>
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" id="sidebar">
-        <a href={href('')} class="brand">
-          <div class="brand-mark"><Icon name="hanger" size={22} /></div>
-          <span>
-            <b>MyOwnWardrobe</b>
-            <span>YOUR CLOSET, YOUR STYLE</span>
-          </span>
-        </a>
+        <div class="brand-row">
+          <a href={href('')} class="brand">
+            <div class="brand-mark"><Icon name="hanger" size={22} /></div>
+            <span>
+              <b>MyOwnWardrobe</b>
+              <span>YOUR CLOSET, YOUR STYLE</span>
+            </span>
+          </a>
+          <button id="menu-close" type="button" class="icon-btn menu-close" aria-label="Cerrar menú">
+            <Icon name="close" size={16} />
+          </button>
+        </div>
 
         <div class="side-label">MENÚ</div>
         <nav>
@@ -85,6 +103,10 @@ const nav = [
               <Icon name="check" size={16} />
               <span id="sync-status">Modo invitado</span>
             </div>
+            <button id="theme-toggle" type="button" class="icon-btn" title="Cambiar tema" aria-label="Cambiar tema">
+              <span class="icon-moon"><Icon name="moon" size={16} /></span>
+              <span class="icon-sun"><Icon name="sun" size={16} /></span>
+            </button>
           </div>
         </header>
 
@@ -93,9 +115,9 @@ const nav = [
         </div>
 
         <footer class="footer">
-          <span>© 2026 MYOWNWARDROBE</span>
-          <span>HECHO CON ASTRO + SUPABASE</span>
-          <span>GITHUB PAGES</span>
+          <span>© 2026 MyOwnWardrobe · Todos los derechos reservados</span>
+          <span><a href={href('armario/')}>Mi armario</a> · <a href={href('outfits/')}>Outfits</a> · <a href={href('login/')}>Mi cuenta</a></span>
+          <span>Tu armario, tu estilo</span>
         </footer>
       </div>
     </div>
@@ -110,6 +132,8 @@ const nav = [
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('sidebar-backdrop');
       const menuToggle = document.getElementById('menu-toggle');
+      const menuClose = document.getElementById('menu-close');
+      const themeToggle = document.getElementById('theme-toggle');
 
       const setMenu = (open: boolean) => {
         sidebar?.classList.toggle('show', open);
@@ -136,7 +160,19 @@ const nav = [
       const doLogout = () => signOut().catch(() => {});
       logoutEl?.addEventListener('click', doLogout);
 
+      const applyTheme = (theme: 'light' | 'dark') => {
+        document.documentElement.dataset.theme = theme;
+        try {
+          localStorage.setItem('mow-theme', theme);
+        } catch {}
+      };
+
+      themeToggle?.addEventListener('click', () =>
+        applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
+      );
+
       menuToggle?.addEventListener('click', () => setMenu(!sidebar?.classList.contains('show')));
+      menuClose?.addEventListener('click', () => setMenu(false));
       backdrop?.addEventListener('click', () => setMenu(false));
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') setMenu(false);
