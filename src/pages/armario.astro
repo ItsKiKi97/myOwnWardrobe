@@ -54,8 +54,8 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
     <div class="modal">
       <div class="modal-head">
         <div>
-          <div class="eyebrow">NUEVA PRENDA</div>
-          <h2>Añadir al armario</h2>
+          <div class="eyebrow" id="modal-eyebrow">NUEVA PRENDA</div>
+          <h2 id="modal-title">Añadir al armario</h2>
         </div>
         <button id="close-modal" type="button" class="icon-btn" aria-label="Cerrar">
           <Icon name="close" size={16} />
@@ -107,7 +107,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
 
   <script>
     import { CATEGORIAS, requireUser, supabaseConfigured, type Categoria, type Prenda } from '../lib/supabase';
-    import { deletePrenda, esc, fetchPrendas, insertPrenda, uploadPhoto } from '../lib/wardrobe';
+    import { deletePhoto, deletePrenda, esc, fetchPrendas, insertPrenda, updatePrenda, uploadPhoto } from '../lib/wardrobe';
 
     const EMOJI: Record<Categoria, string> = {
       superior: '👕',
@@ -130,8 +130,12 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
     const preview = document.getElementById('photo-preview') as HTMLImageElement | null;
     const searchInput = document.getElementById('search') as HTMLInputElement | null;
     const filterSelect = document.getElementById('filter-cat') as HTMLSelectElement | null;
+    const modalEyebrow = document.getElementById('modal-eyebrow');
+    const modalTitle = document.getElementById('modal-title');
 
     let prendas: Prenda[] = [];
+    let editingId: string | null = null;
+    let originalFoto: string | null = null;
 
     const showError = (text: string) => {
       if (!errorEl) return;
@@ -140,23 +144,56 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       setTimeout(() => errorEl.classList.add('hidden'), 6000);
     };
 
-    const openModal = () => {
+    const setVal = (id: string, value: string) => {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (el) el.value = value;
+    };
+
+    const openModal = (prenda?: Prenda) => {
+      editingId = prenda?.id ?? null;
+      originalFoto = prenda?.foto_url ?? null;
+      form?.reset();
+      if (fileInput) fileInput.value = '';
+      if (prenda) {
+        setVal('nombre', prenda.nombre);
+        setVal('categoria', prenda.categoria);
+        setVal('color', prenda.color ?? '');
+        setVal('temporada', prenda.temporada ?? '');
+        if (modalEyebrow) modalEyebrow.textContent = 'EDITAR PRENDA';
+        if (modalTitle) modalTitle.textContent = 'Editar prenda';
+        if (save) save.textContent = 'Guardar cambios';
+        if (preview && prenda.foto_url) {
+          preview.src = prenda.foto_url;
+          preview.classList.remove('hidden');
+        }
+      } else {
+        if (modalEyebrow) modalEyebrow.textContent = 'NUEVA PRENDA';
+        if (modalTitle) modalTitle.textContent = 'Añadir al armario';
+        if (save) save.textContent = 'Guardar prenda';
+      }
       modal?.classList.remove('hidden');
       document.body.classList.add('modal-open');
       (document.getElementById('nombre') as HTMLInputElement)?.focus();
     };
+
     const closeModal = () => {
       modal?.classList.add('hidden');
       document.body.classList.remove('modal-open');
       form?.reset();
+      editingId = null;
+      originalFoto = null;
+      if (fileInput) fileInput.value = '';
       if (preview) {
         preview.src = '';
         preview.classList.add('hidden');
       }
+      if (modalEyebrow) modalEyebrow.textContent = 'NUEVA PRENDA';
+      if (modalTitle) modalTitle.textContent = 'Añadir al armario';
+      if (save) save.textContent = 'Guardar prenda';
     };
 
-    document.getElementById('toggle-form')?.addEventListener('click', openModal);
-    document.getElementById('empty-add')?.addEventListener('click', openModal);
+    document.getElementById('toggle-form')?.addEventListener('click', () => openModal());
+    document.getElementById('empty-add')?.addEventListener('click', () => openModal());
     document.getElementById('close-modal')?.addEventListener('click', closeModal);
     document.getElementById('cancel')?.addEventListener('click', closeModal);
     modal?.addEventListener('click', (event) => {
@@ -182,7 +219,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
     });
 
     const card = (p: Prenda) => `
-      <article class="garment-card">
+      <article class="garment-card editable" data-edit-card="${esc(p.id)}" tabindex="0" role="button" aria-label="Editar ${esc(p.nombre)}">
         <div class="garment-photo">
           ${
             p.foto_url
@@ -190,6 +227,9 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
               : `<div class="photo-placeholder">${EMOJI[p.categoria] ?? '👕'}<span>SIN FOTO</span></div>`
           }
           <div class="card-actions">
+            <button type="button" data-edit="${esc(p.id)}" class="icon-btn" title="Editar prenda" aria-label="Editar prenda">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m14 6 4 4"/></svg>
+            </button>
             <button type="button" data-delete="${esc(p.id)}" class="icon-btn danger" title="Eliminar prenda">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
             </button>
@@ -233,6 +273,31 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
           }
         });
       });
+
+      const editar = (id: string) => {
+        const prenda = prendas.find((p) => p.id === id);
+        if (prenda) openModal(prenda);
+      };
+
+      grid.querySelectorAll<HTMLElement>('[data-edit]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          editar(button.dataset.edit!);
+        });
+      });
+
+      grid.querySelectorAll<HTMLElement>('[data-edit-card]').forEach((card) => {
+        card.addEventListener('click', (event) => {
+          if ((event.target as HTMLElement).closest('button')) return;
+          editar(card.dataset.editCard!);
+        });
+        card.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            editar(card.dataset.editCard!);
+          }
+        });
+      });
     }
 
     form?.addEventListener('submit', async (event) => {
@@ -246,6 +311,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       const file = fileInput?.files?.[0];
       if (!nombre) return showError('La prenda necesita un nombre.');
 
+      const wasEditing = editingId !== null;
       if (save) {
         save.disabled = true;
         save.textContent = 'Guardando…';
@@ -253,9 +319,21 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
 
       try {
         const user = await requireUser();
-        const foto_url = file ? await uploadPhoto(user.id, file) : null;
-        const prenda = await insertPrenda(user.id, { nombre, categoria, color, temporada, foto_url });
-        prendas = [prenda, ...prendas];
+        let foto_url = originalFoto;
+        if (file) {
+          foto_url = await uploadPhoto(user.id, file);
+          if (wasEditing && originalFoto && originalFoto !== foto_url) {
+            await deletePhoto(originalFoto).catch(() => {});
+          }
+        }
+        const datos = { nombre, categoria, color, temporada, foto_url };
+        if (wasEditing && editingId) {
+          const actualizada = await updatePrenda(editingId, datos);
+          prendas = prendas.map((p) => (p.id === editingId ? actualizada : p));
+        } else {
+          const prenda = await insertPrenda(user.id, datos);
+          prendas = [prenda, ...prendas];
+        }
         closeModal();
         if (searchInput) searchInput.value = '';
         if (filterSelect) filterSelect.value = 'todas';
@@ -265,7 +343,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       } finally {
         if (save) {
           save.disabled = false;
-          save.textContent = 'Guardar prenda';
+          save.textContent = wasEditing ? 'Guardar cambios' : 'Guardar prenda';
         }
       }
     });

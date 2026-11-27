@@ -83,6 +83,17 @@ export async function insertPrenda(userId: string, prenda: NuevaPrenda): Promise
   return data as Prenda;
 }
 
+export async function updatePrenda(id: string, cambios: Partial<NuevaPrenda>): Promise<Prenda> {
+  const { data, error } = await getSupabase()
+    .from('prendas')
+    .update(cambios)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Prenda;
+}
+
 export async function deletePrenda(id: string, fotoUrl: string | null): Promise<void> {
   if (fotoUrl) await deletePhoto(fotoUrl).catch(() => {});
   const { error } = await getSupabase().from('prendas').delete().eq('id', id);
