@@ -135,13 +135,28 @@ const nav = [
       const menuClose = document.getElementById('menu-close');
       const themeToggle = document.getElementById('theme-toggle');
 
+      const isMobile = () => window.matchMedia('(max-width: 760px)').matches;
+
       const setMenu = (open: boolean) => {
         sidebar?.classList.toggle('show', open);
+        if (sidebar) {
+          if (isMobile()) {
+            sidebar.style.left = open ? '0px' : '-268px';
+            sidebar.style.visibility = open ? 'visible' : 'hidden';
+          } else {
+            sidebar.style.removeProperty('left');
+            sidebar.style.removeProperty('visibility');
+          }
+        }
         backdrop?.classList.toggle('hidden', !open);
         document.body.classList.toggle('menu-open', open);
         menuToggle?.setAttribute('aria-expanded', String(open));
         menuToggle?.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
       };
+
+      window.addEventListener('resize', () => {
+        if (!isMobile()) setMenu(false);
+      });
 
       const render = (email?: string | null) => {
         if (email) {
