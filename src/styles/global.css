@@ -5,6 +5,11 @@
 .msg.ok{background:#eef1e7;color:#4d5c3a}
 .msg.error{background:#f8eeeb;color:#a85c50}
 .nav-link svg,.icon-btn svg{flex-shrink:0}
+.bg-option{display:flex;align-items:flex-start;gap:10px;margin:-6px 0 14px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--soft);cursor:pointer}
+.bg-option input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--olive-dark);flex-shrink:0}
+.bg-option b,.bg-option small{display:block}.bg-option b{font-size:12px}.bg-option small{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4}
+.foto-estado{font-size:10px;color:var(--olive-dark);margin:-6px 0 13px}
+.section-head .outline-btn{flex-shrink:0}
 /* --- Refinamientos responsive / accesibilidad --- */
 .main,.content{min-width:0}
 .banner-art{pointer-events:none}

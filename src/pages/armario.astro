@@ -72,6 +72,15 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
             <input id="foto" type="file" accept="image/*" />
           </label>
 
+          <label class="bg-option">
+            <input id="quitar-fondo" type="checkbox" />
+            <span>
+              <b>Quitar fondo automáticamente</b>
+              <small>Recorta la prenda sobre fondo liso · la primera vez descarga ~40 MB</small>
+            </span>
+          </label>
+          <p id="foto-estado" class="foto-estado hidden" aria-live="polite"></p>
+
           <div class="form-grid">
             <label class="field">
               <span>NOMBRE</span>
@@ -107,7 +116,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
 
   <script>
     import { CATEGORIAS, requireUser, supabaseConfigured, type Categoria, type Prenda } from '../lib/supabase';
-    import { deletePhoto, deletePrenda, esc, fetchPrendas, insertPrenda, updatePrenda, uploadPhoto } from '../lib/wardrobe';
+    import { deletePhoto, deletePrenda, esc, fetchPrendas, insertPrenda, quitarFondo, updatePrenda, uploadPhoto } from '../lib/wardrobe';
 
     const EMOJI: Record<Categoria, string> = {
       superior: '👕',
@@ -132,6 +141,8 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
     const filterSelect = document.getElementById('filter-cat') as HTMLSelectElement | null;
     const modalEyebrow = document.getElementById('modal-eyebrow');
     const modalTitle = document.getElementById('modal-title');
+    const quitarFondoInput = document.getElementById('quitar-fondo') as HTMLInputElement | null;
+    const fotoEstado = document.getElementById('foto-estado');
 
     let prendas: Prenda[] = [];
     let editingId: string | null = null;
@@ -144,6 +155,12 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       setTimeout(() => errorEl.classList.add('hidden'), 6000);
     };
 
+    const setFotoEstado = (text: string) => {
+      if (!fotoEstado) return;
+      fotoEstado.textContent = text;
+      fotoEstado.classList.toggle('hidden', !text);
+    };
+
     const setVal = (id: string, value: string) => {
       const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
       if (el) el.value = value;
@@ -154,6 +171,8 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       originalFoto = prenda?.foto_url ?? null;
       form?.reset();
       if (fileInput) fileInput.value = '';
+      if (quitarFondoInput) quitarFondoInput.checked = false;
+      setFotoEstado('');
       if (prenda) {
         setVal('nombre', prenda.nombre);
         setVal('categoria', prenda.categoria);
@@ -183,6 +202,8 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       editingId = null;
       originalFoto = null;
       if (fileInput) fileInput.value = '';
+      if (quitarFondoInput) quitarFondoInput.checked = false;
+      setFotoEstado('');
       if (preview) {
         preview.src = '';
         preview.classList.add('hidden');
@@ -205,6 +226,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
 
     fileInput?.addEventListener('change', () => {
       const file = fileInput.files?.[0];
+      setFotoEstado('');
       if (!file || !preview) return;
       preview.src = URL.createObjectURL(file);
       preview.classList.remove('hidden');
@@ -309,6 +331,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       const temporada = (document.getElementById('temporada') as HTMLSelectElement).value;
       const color = (document.getElementById('color') as HTMLInputElement).value.trim();
       const file = fileInput?.files?.[0];
+      const conRecorte = Boolean(file && quitarFondoInput?.checked);
       if (!nombre) return showError('La prenda necesita un nombre.');
 
       const wasEditing = editingId !== null;
@@ -321,7 +344,22 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
         const user = await requireUser();
         let foto_url = originalFoto;
         if (file) {
-          foto_url = await uploadPhoto(user.id, file);
+          let fotoFinal = file;
+          let transparente = false;
+          if (conRecorte) {
+            try {
+              setFotoEstado('Quitando fondo… la primera vez puede tardar');
+              fotoFinal = await quitarFondo(file, setFotoEstado);
+              transparente = true;
+              if (preview) preview.src = URL.createObjectURL(fotoFinal);
+              setFotoEstado('Fondo eliminado ✅');
+            } catch (error) {
+              console.error(error);
+              setFotoEstado('');
+              showError('No se pudo quitar el fondo. Se guardará la foto original.');
+            }
+          }
+          foto_url = await uploadPhoto(user.id, fotoFinal, transparente);
           if (wasEditing && originalFoto && originalFoto !== foto_url) {
             await deletePhoto(originalFoto).catch(() => {});
           }

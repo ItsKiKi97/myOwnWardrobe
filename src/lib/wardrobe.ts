@@ -3,7 +3,12 @@ import { getSupabase, type Outfit, type Prenda, type Categoria } from './supabas
 const BUCKET = 'prendas';
 
 /** Reduce y comprime una foto en el navegador antes de subirla (ahorra almacenamiento). */
-export async function compressImage(file: File, maxSize = 1280, quality = 0.82): Promise<Blob> {
+export async function compressImage(
+  file: File,
+  maxSize = 1280,
+  quality = 0.82,
+  keepAlpha = false
+): Promise<Blob> {
   if (!file.type.startsWith('image/')) return file;
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return file;
@@ -18,18 +23,41 @@ export async function compressImage(file: File, maxSize = 1280, quality = 0.82):
   bitmap.close?.();
 
   const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', quality)
+    canvas.toBlob(resolve, keepAlpha ? 'image/png' : 'image/jpeg', quality)
   );
   return blob ?? file;
 }
 
+/** Quita el fondo en el navegador y devuelve un PNG transparente. */
+export async function quitarFondo(
+  file: File,
+  onProgress?: (texto: string) => void
+): Promise<File> {
+  const { removeBackground } = await import('@imgly/background-removal');
+  const blob = await removeBackground(file, {
+    model: 'isnet_quint8',
+    output: { format: 'image/png', quality: 0.8 },
+    progress: (_key, current, total) => {
+      if (total > 0) onProgress?.(`Preparando el recorte… ${Math.round((current / total) * 100)}%`);
+    },
+  });
+  const nombre = file.name.replace(/\.[^.]+$/, '') + '-sin-fondo.png';
+  return new File([blob], nombre, { type: 'image/png' });
+}
+
 /** Sube una foto al bucket y devuelve la URL pública. */
-export async function uploadPhoto(userId: string, file: File): Promise<string> {
+export async function uploadPhoto(
+  userId: string,
+  file: File,
+  keepAlpha = false
+): Promise<string> {
   const supabase = getSupabase();
-  const blob = await compressImage(file);
-  const path = `${userId}/${crypto.randomUUID()}.jpg`;
+  const blob = await compressImage(file, 1280, 0.82, keepAlpha);
+  const ext = keepAlpha ? 'png' : 'jpg';
+  const mime = keepAlpha ? 'image/png' : 'image/jpeg';
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
-    contentType: 'image/jpeg',
+    contentType: mime,
     cacheControl: '3600',
   });
   if (error) throw new Error(`No se pudo subir la foto: ${error.message}`);

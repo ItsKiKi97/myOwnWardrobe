@@ -7,7 +7,10 @@ Hecha con **Astro + CSS propio (estilo MyOwnWardrobe) + Supabase**, hospedada gr
 
 - **Cuenta y login** con email y contraseña (Supabase Auth).
 - **Prendas con foto**: nombre, categoría, color y temporada. Las fotos se comprimen en el navegador antes de subirse.
-- **Outfits**: selecciona varias prendas, ponle nombre y guárdalo.
+- **Quitar fondo**: opción al añadir/editar prenda que recorta la prenda en el navegador y guarda un PNG transparente (la primera vez descarga ~40 MB del modelo).
+- **Edición completa**: pulsa una tarjeta para cambiar cualquier campo o la foto.
+- **Outfits**: selecciona varias prendas, ponle nombre y guárdalo. Botón «Outfit aleatorio» que propone un look automáticamente.
+- **Tema claro/oscuro** con preferencia guardada.
 - Cada usuario solo ve y borra sus propios datos (políticas RLS).
 
 ## Estructura
@@ -21,7 +24,7 @@ armario/
 │   ├── layouts/Layout.astro       # plantilla base con sidebar, topbar y sesión
 │   ├── lib/
 │   │   ├── supabase.ts            # cliente, sesión y tipos
-│   │   └── wardrobe.ts            # consultas, subida y compresión de fotos
+│   │   └── wardrobe.ts            # consultas, subida, compresión y recorte de fotos
 │   ├── pages/
 │   │   ├── index.astro            # portada
 │   │   ├── login.astro            # entrar / crear cuenta / recuperar contraseña

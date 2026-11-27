@@ -23,7 +23,7 @@ const base = import.meta.env.BASE_URL;
     <div class="builder-symbol"><Icon name="sparkles" size={20} /></div>
     <div>
       <b>Toca las prendas para añadirlas al look</b>
-      <span>Las que elijas aparecerán en la vista previa. Luego solo ponle nombre y guarda.</span>
+      <span>Las que elijas aparecerán en la vista previa. También puedes pulsar «Outfit aleatorio». Luego ponle nombre y guarda.</span>
     </div>
   </div>
 
@@ -34,6 +34,9 @@ const base = import.meta.env.BASE_URL;
           <h2>Tus prendas</h2>
           <p id="counter">Cargando…</p>
         </div>
+        <button id="random-outfit" type="button" class="outline-btn">
+          <Icon name="shuffle" size={15} /> Outfit aleatorio
+        </button>
       </div>
       <div class="picker-grid" id="picker"></div>
       <div class="empty-state hidden" id="empty">
@@ -177,6 +180,41 @@ const base = import.meta.env.BASE_URL;
       selectedCount.textContent = `${seleccion.size} PRENDA${seleccion.size === 1 ? '' : 'S'}`;
       saveButton.disabled = seleccion.size === 0;
     };
+
+    document.getElementById('random-outfit')?.addEventListener('click', () => {
+      if (!prendas.length) return showError('Añade prendas al armario para generar un look aleatorio.');
+
+      const elegidos: string[] = [];
+      const elegir = (categoria: string) => {
+        const opciones = prendas.filter((p) => p.categoria === categoria);
+        if (!opciones.length) return;
+        elegidos.push(opciones[Math.floor(Math.random() * opciones.length)].id);
+      };
+
+      ['superior', 'inferior', 'calzado'].forEach(elegir);
+      const extras = ['abrigo', 'accesorio'].filter((cat) =>
+        prendas.some((p) => p.categoria === cat)
+      );
+      if (extras.length) elegir(extras[Math.floor(Math.random() * extras.length)]);
+
+      if (elegidos.length < 4) {
+        const restantes = prendas
+          .filter((p) => !elegidos.includes(p.id))
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 4 - elegidos.length);
+        restantes.forEach((p) => elegidos.push(p.id));
+      }
+
+      seleccion.clear();
+      elegidos.forEach((id) => seleccion.add(id));
+      if (nameInput && !nameInput.value.trim()) {
+        nameInput.value = `Look aleatorio ${new Date().toLocaleDateString('es-ES')}`;
+      }
+      renderPicker();
+      renderPreview();
+      showSaved('Look aleatorio listo 🎲');
+      preview?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
 
     const renderOutfits = () => {
       if (!listEl || !noOutfits) return;
