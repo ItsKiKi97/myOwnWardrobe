@@ -43,6 +43,13 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
     <button id="empty-add" type="button" class="primary-btn"><Icon name="plus" size={15} /> Añadir prenda</button>
   </div>
 
+  <div class="empty-state hidden" id="no-results">
+    <span class="empty-icon"><Icon name="search" size={23} /></span>
+    <h3>Sin resultados</h3>
+    <p>No hay prendas que coincidan con la búsqueda o el filtro. Prueba con otro texto o categoría.</p>
+    <button id="clear-filters" type="button" class="outline-btn">Limpiar filtros</button>
+  </div>
+
   <div class="modal-backdrop hidden" id="modal">
     <div class="modal">
       <div class="modal-head">
@@ -113,6 +120,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
 
     const grid = document.getElementById('grid');
     const empty = document.getElementById('empty');
+    const noResults = document.getElementById('no-results');
     const counter = document.getElementById('counter');
     const errorEl = document.getElementById('error');
     const modal = document.getElementById('modal');
@@ -134,10 +142,12 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
 
     const openModal = () => {
       modal?.classList.remove('hidden');
+      document.body.classList.add('modal-open');
       (document.getElementById('nombre') as HTMLInputElement)?.focus();
     };
     const closeModal = () => {
       modal?.classList.add('hidden');
+      document.body.classList.remove('modal-open');
       form?.reset();
       if (preview) {
         preview.src = '';
@@ -152,6 +162,9 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
     modal?.addEventListener('click', (event) => {
       if (event.target === modal) closeModal();
     });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeModal();
+    });
 
     fileInput?.addEventListener('change', () => {
       const file = fileInput.files?.[0];
@@ -162,6 +175,11 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
 
     searchInput?.addEventListener('input', render);
     filterSelect?.addEventListener('change', render);
+    document.getElementById('clear-filters')?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      if (filterSelect) filterSelect.value = 'todas';
+      render();
+    });
 
     const card = (p: Prenda) => `
       <article class="garment-card">
@@ -198,6 +216,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
       grid.innerHTML = visibles.map(card).join('');
       grid.classList.toggle('hidden', visibles.length === 0);
       empty!.classList.toggle('hidden', prendas.length > 0);
+      noResults?.classList.toggle('hidden', !(prendas.length > 0 && visibles.length === 0));
       counter.textContent = `${visibles.length} de ${prendas.length} prendas`;
 
       grid.querySelectorAll<HTMLButtonElement>('[data-delete]').forEach((button) => {

@@ -152,6 +152,7 @@ const base = import.meta.env.BASE_URL;
     const renderPreview = () => {
       if (!preview || !saveButton || !selectedCount) return;
       const elegidas = prendas.filter((p) => seleccion.has(p.id)).slice(0, 4);
+      preview.classList.toggle('single', elegidas.length === 1);
       preview.innerHTML =
         elegidas.length === 0
           ? `<div class="preview-empty">
@@ -180,6 +181,14 @@ const base = import.meta.env.BASE_URL;
     const renderOutfits = () => {
       if (!listEl || !noOutfits) return;
       const porId = new Map(prendas.map((p) => [p.id, p]));
+      const thumb = (p?: Prenda) =>
+        p
+          ? `<div class="outfit-thumb">${
+              p.foto_url
+                ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
+                : '<span style="font-size:24px">👕</span>'
+            }</div>`
+          : '<div class="outfit-thumb empty-thumb" aria-hidden="true"></div>';
       listEl.innerHTML = outfits
         .map((o) => {
           const items = o.prenda_ids.map((id) => porId.get(id)).filter((p): p is Prenda => Boolean(p));
@@ -188,18 +197,7 @@ const base = import.meta.env.BASE_URL;
           return `
           <article class="outfit-card">
             <div class="outfit-collage">
-              ${visibles
-                .map(
-                  (p) => `
-                <div class="outfit-thumb">
-                  ${
-                    p.foto_url
-                      ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
-                      : '<span style="font-size:24px">👕</span>'
-                  }
-                </div>`
-                )
-                .join('')}
+              ${Array.from({ length: 4 }, (_, i) => thumb(visibles[i])).join('')}
               ${items.length > 4 ? `<span class="more-count">+${items.length - 4}</span>` : ''}
             </div>
             <div class="outfit-info">
