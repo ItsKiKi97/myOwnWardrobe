@@ -62,7 +62,7 @@ const href = (path: string) => `${base}${path}`;
       <a href={href('armario/')} class="text-btn">Ver todo <Icon name="arrow" size={14} /></a>
     </div>
     <div class="garment-grid" id="recent"></div>
-    <div class="empty-state" id="recent-empty">
+    <div class="empty-state hidden" id="recent-empty">
       <span class="empty-icon"><Icon name="hanger" size={23} /></span>
       <h3>Tu armario está esperando</h3>
       <p>Añade tu primera prenda para empezar a construir tu estilo. Solo necesitas una foto y un nombre.</p>
@@ -71,7 +71,7 @@ const href = (path: string) => `${base}${path}`;
   </section>
 
   <section class="feature-strip">
-    <span class="feature-icon"><Icon name="sparkles" size={20} /></span>
+    <div class="feature-icon"><Icon name="sparkles" size={20} /></div>
     <div>
       <b>¿No sabes qué ponerte hoy?</b>
       <span>Selecciona varias prendas y guarda la combinación perfecta.</span>
@@ -115,8 +115,14 @@ const href = (path: string) => `${base}${path}`;
       </article>`;
 
     (async () => {
+      const grid = document.getElementById('recent');
+      const empty = document.getElementById('recent-empty');
       const user = await getCurrentUser();
-      if (!user) return;
+      if (!user) {
+        grid?.classList.add('hidden');
+        empty?.classList.remove('hidden');
+        return;
+      }
       try {
         const [prendas, outfits] = await Promise.all([fetchPrendas(user.id), fetchOutfits(user.id)]);
         text('stat-prendas', String(prendas.length));
@@ -124,8 +130,6 @@ const href = (path: string) => `${base}${path}`;
         text('stat-categorias', String(new Set(prendas.map((p) => p.categoria)).size));
         text('stat-fotos', String(prendas.filter((p) => p.foto_url).length));
 
-        const grid = document.getElementById('recent');
-        const empty = document.getElementById('recent-empty');
         if (grid && empty) {
           grid.innerHTML = prendas.slice(0, 4).map(card).join('');
           grid.classList.toggle('hidden', prendas.length === 0);
