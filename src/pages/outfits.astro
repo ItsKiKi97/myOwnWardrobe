@@ -27,39 +27,17 @@ const base = import.meta.env.BASE_URL;
     </div>
   </div>
 
-  <section class="tryon-section">
+  <section class="look-section">
     <div class="section-head">
       <div>
-        <h2>Tu lienzo</h2>
-        <p>Desliza cada zona y toca una prenda para ver cómo quedaría puesta.</p>
+        <h2>Tu look</h2>
+        <p>Camiseta arriba, pantalón en medio, zapatos abajo. Usa las flechas para cambiar cada prenda.</p>
       </div>
-      <button id="tryon-random" type="button" class="outline-btn">
+      <button id="look-random" type="button" class="outline-btn">
         <Icon name="shuffle" size={15} /> Probar al azar
       </button>
     </div>
-    <div class="tryon-canvas" id="tryon-canvas">
-      <div class="tryon-figure" aria-hidden="true"></div>
-      <div class="tryon-slot slot-abrigo">
-        <span class="slot-label">ABRIGO</span>
-        <div class="slot-scroll" data-scroll="abrigo"></div>
-      </div>
-      <div class="tryon-slot slot-superior">
-        <span class="slot-label">SUPERIOR</span>
-        <div class="slot-scroll" data-scroll="superior"></div>
-      </div>
-      <div class="tryon-slot slot-inferior">
-        <span class="slot-label">INFERIOR</span>
-        <div class="slot-scroll" data-scroll="inferior"></div>
-      </div>
-      <div class="tryon-slot slot-calzado">
-        <span class="slot-label">CALZADO</span>
-        <div class="slot-scroll" data-scroll="calzado"></div>
-      </div>
-      <div class="tryon-slot slot-accesorio">
-        <span class="slot-label">ACCESORIO</span>
-        <div class="slot-scroll" data-scroll="accesorio"></div>
-      </div>
-    </div>
+    <div class="look-stack" id="look-stack"></div>
   </section>
 
   <div class="builder-layout">
@@ -183,7 +161,7 @@ const base = import.meta.env.BASE_URL;
           else seleccion.add(id);
           renderPicker();
           renderPreview();
-          renderTryon();
+          renderLook();
         });
       });
     };
@@ -225,37 +203,55 @@ const base = import.meta.env.BASE_URL;
       accesorio: '🎒',
     };
 
-    const renderTryon = () => {
-      document.querySelectorAll<HTMLElement>('[data-scroll]').forEach((contenedor) => {
-        const cat = contenedor.dataset.scroll!;
-        const opciones = prendas.filter((p) => p.categoria === cat);
-        const scroll = contenedor.scrollLeft;
-        contenedor.innerHTML = opciones.length
-          ? opciones
-              .map(
-                (p) => `
-              <button type="button" data-tryon="${esc(p.id)}" class="tryon-item${seleccion.has(p.id) ? ' picked' : ''}" title="${esc(p.nombre)}">
+    const renderLook = () => {
+      const stack = document.getElementById('look-stack');
+      if (!stack) return;
+      const categorias = ['abrigo', 'superior', 'inferior', 'calzado', 'accesorio'];
+      stack.innerHTML = categorias
+        .filter(
+          (cat) =>
+            cat === 'superior' || cat === 'inferior' || cat === 'calzado' || prendas.some((p) => p.categoria === cat)
+        )
+        .map((cat) => {
+          const opciones = prendas.filter((p) => p.categoria === cat);
+          const idx = opciones.findIndex((p) => seleccion.has(p.id));
+          const actual = idx >= 0 ? opciones[idx] : null;
+          const flechas = opciones.length < 2 ? 'disabled' : '';
+          return `
+          <div class="look-row">
+            <span class="look-label">${cat.toUpperCase()}</span>
+            <div class="look-line">
+              <button type="button" class="look-arrow" data-look-cat="${cat}" data-look-dir="-1" aria-label="Prenda anterior" ${flechas}>‹</button>
+              <div class="look-photo">
                 ${
-                  p.foto_url
-                    ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
-                    : `<span style="font-size:34px">${EMOJI[cat] ?? '👕'}</span>`
+                  actual
+                    ? actual.foto_url
+                      ? `<img src="${esc(actual.foto_url)}" alt="${esc(actual.nombre)}" loading="lazy" />`
+                      : `<span style="font-size:44px">${EMOJI[cat] ?? '👕'}</span>`
+                    : `<span class="look-empty">${EMOJI[cat] ?? '👕'}<small>Añade una prenda</small></span>`
                 }
-                <small>${esc(p.nombre)}</small>
-              </button>`
-              )
-              .join('')
-          : '<span class="slot-empty">Sin prendas</span>';
-        contenedor.scrollLeft = scroll;
+              </div>
+              <button type="button" class="look-arrow" data-look-cat="${cat}" data-look-dir="1" aria-label="Prenda siguiente" ${flechas}>›</button>
+            </div>
+            <div class="look-caption"><b>${esc(actual?.nombre ?? 'Sin prenda')}</b><span>${idx >= 0 ? idx + 1 : 0}/${opciones.length}</span></div>
+          </div>`;
+        })
+        .join('');
 
-        contenedor.querySelectorAll<HTMLButtonElement>('[data-tryon]').forEach((button) => {
-          button.addEventListener('click', () => {
-            const id = button.dataset.tryon!;
-            if (seleccion.has(id)) seleccion.delete(id);
-            else seleccion.add(id);
-            renderPicker();
-            renderPreview();
-            renderTryon();
-          });
+      stack.querySelectorAll<HTMLButtonElement>('[data-look-cat]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const cat = button.dataset.lookCat!;
+          const dir = Number(button.dataset.lookDir);
+          const opciones = prendas.filter((p) => p.categoria === cat);
+          if (!opciones.length) return;
+          const actual = opciones.findIndex((p) => seleccion.has(p.id));
+          const base = actual === -1 ? (dir > 0 ? -1 : 0) : actual;
+          const next = opciones[(base + dir + opciones.length) % opciones.length];
+          opciones.forEach((p) => seleccion.delete(p.id));
+          seleccion.add(next.id);
+          renderPicker();
+          renderPreview();
+          renderLook();
         });
       });
     };
@@ -291,13 +287,13 @@ const base = import.meta.env.BASE_URL;
       }
       renderPicker();
       renderPreview();
-      renderTryon();
+      renderLook();
       showSaved('Look aleatorio listo 🎲');
-      document.getElementById('tryon-canvas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('look-stack')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     document.getElementById('random-outfit')?.addEventListener('click', generarLookAleatorio);
-    document.getElementById('tryon-random')?.addEventListener('click', generarLookAleatorio);
+    document.getElementById('look-random')?.addEventListener('click', generarLookAleatorio);
 
     const renderOutfits = () => {
       if (!listEl || !noOutfits) return;
@@ -367,7 +363,7 @@ const base = import.meta.env.BASE_URL;
         if (nameInput) nameInput.value = '';
         renderPicker();
         renderPreview();
-        renderTryon();
+        renderLook();
         renderOutfits();
         showSaved('Outfit guardado ✅');
       } catch (error) {
@@ -387,7 +383,7 @@ const base = import.meta.env.BASE_URL;
         [prendas, outfits] = await Promise.all([fetchPrendas(user.id), fetchOutfits(user.id)]);
         renderPicker();
         renderPreview();
-        renderTryon();
+        renderLook();
         renderOutfits();
       } catch (error) {
         if ((error as Error).message !== 'Sesión no iniciada') showError((error as Error).message);
