@@ -27,6 +27,41 @@ const base = import.meta.env.BASE_URL;
     </div>
   </div>
 
+  <section class="tryon-section">
+    <div class="section-head">
+      <div>
+        <h2>Tu lienzo</h2>
+        <p>Desliza cada zona y toca una prenda para ver cómo quedaría puesta.</p>
+      </div>
+      <button id="tryon-random" type="button" class="outline-btn">
+        <Icon name="shuffle" size={15} /> Probar al azar
+      </button>
+    </div>
+    <div class="tryon-canvas" id="tryon-canvas">
+      <div class="tryon-figure" aria-hidden="true"></div>
+      <div class="tryon-slot slot-abrigo">
+        <span class="slot-label">ABRIGO</span>
+        <div class="slot-scroll" data-scroll="abrigo"></div>
+      </div>
+      <div class="tryon-slot slot-superior">
+        <span class="slot-label">SUPERIOR</span>
+        <div class="slot-scroll" data-scroll="superior"></div>
+      </div>
+      <div class="tryon-slot slot-inferior">
+        <span class="slot-label">INFERIOR</span>
+        <div class="slot-scroll" data-scroll="inferior"></div>
+      </div>
+      <div class="tryon-slot slot-calzado">
+        <span class="slot-label">CALZADO</span>
+        <div class="slot-scroll" data-scroll="calzado"></div>
+      </div>
+      <div class="tryon-slot slot-accesorio">
+        <span class="slot-label">ACCESORIO</span>
+        <div class="slot-scroll" data-scroll="accesorio"></div>
+      </div>
+    </div>
+  </section>
+
   <div class="builder-layout">
     <section>
       <div class="section-head">
@@ -148,6 +183,7 @@ const base = import.meta.env.BASE_URL;
           else seleccion.add(id);
           renderPicker();
           renderPreview();
+          renderTryon();
         });
       });
     };
@@ -181,7 +217,50 @@ const base = import.meta.env.BASE_URL;
       saveButton.disabled = seleccion.size === 0;
     };
 
-    document.getElementById('random-outfit')?.addEventListener('click', () => {
+    const EMOJI: Record<string, string> = {
+      superior: '👕',
+      inferior: '👖',
+      abrigo: '🧥',
+      calzado: '👟',
+      accesorio: '🎒',
+    };
+
+    const renderTryon = () => {
+      document.querySelectorAll<HTMLElement>('[data-scroll]').forEach((contenedor) => {
+        const cat = contenedor.dataset.scroll!;
+        const opciones = prendas.filter((p) => p.categoria === cat);
+        const scroll = contenedor.scrollLeft;
+        contenedor.innerHTML = opciones.length
+          ? opciones
+              .map(
+                (p) => `
+              <button type="button" data-tryon="${esc(p.id)}" class="tryon-item${seleccion.has(p.id) ? ' picked' : ''}" title="${esc(p.nombre)}">
+                ${
+                  p.foto_url
+                    ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
+                    : `<span style="font-size:34px">${EMOJI[cat] ?? '👕'}</span>`
+                }
+                <small>${esc(p.nombre)}</small>
+              </button>`
+              )
+              .join('')
+          : '<span class="slot-empty">Sin prendas</span>';
+        contenedor.scrollLeft = scroll;
+
+        contenedor.querySelectorAll<HTMLButtonElement>('[data-tryon]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const id = button.dataset.tryon!;
+            if (seleccion.has(id)) seleccion.delete(id);
+            else seleccion.add(id);
+            renderPicker();
+            renderPreview();
+            renderTryon();
+          });
+        });
+      });
+    };
+
+    const generarLookAleatorio = () => {
       if (!prendas.length) return showError('Añade prendas al armario para generar un look aleatorio.');
 
       const elegidos: string[] = [];
@@ -212,9 +291,13 @@ const base = import.meta.env.BASE_URL;
       }
       renderPicker();
       renderPreview();
+      renderTryon();
       showSaved('Look aleatorio listo 🎲');
-      preview?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
+      document.getElementById('tryon-canvas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    document.getElementById('random-outfit')?.addEventListener('click', generarLookAleatorio);
+    document.getElementById('tryon-random')?.addEventListener('click', generarLookAleatorio);
 
     const renderOutfits = () => {
       if (!listEl || !noOutfits) return;
@@ -284,6 +367,7 @@ const base = import.meta.env.BASE_URL;
         if (nameInput) nameInput.value = '';
         renderPicker();
         renderPreview();
+        renderTryon();
         renderOutfits();
         showSaved('Outfit guardado ✅');
       } catch (error) {
@@ -303,6 +387,7 @@ const base = import.meta.env.BASE_URL;
         [prendas, outfits] = await Promise.all([fetchPrendas(user.id), fetchOutfits(user.id)]);
         renderPicker();
         renderPreview();
+        renderTryon();
         renderOutfits();
       } catch (error) {
         if ((error as Error).message !== 'Sesión no iniciada') showError((error as Error).message);
