@@ -9,8 +9,8 @@ const base = import.meta.env.BASE_URL;
   <div class="page-heading">
     <div>
       <div class="eyebrow">ESTILISMO</div>
-      <h1>Combinar outfits</h1>
-      <p>Selecciona tus prendas favoritas y crea tu próximo look.</p>
+      <h1>Dress Me</h1>
+      <p>Desliza las filas, toca una prenda o pulsa «Mezclar» para descubrir nuevos looks.</p>
     </div>
     <a href={`${base}armario/`} class="primary-btn">
       <Icon name="plus" size={16} /> Nueva prenda
@@ -19,62 +19,80 @@ const base = import.meta.env.BASE_URL;
 
   <p id="error" class="hidden msg error"></p>
 
-  <div class="builder-intro">
-    <div class="builder-symbol"><Icon name="sparkles" size={20} /></div>
-    <div>
-      <b>Toca las prendas para añadirlas al look</b>
-      <span>Las que elijas aparecerán en la vista previa. También puedes pulsar «Outfit aleatorio». Luego ponle nombre y guarda.</span>
-    </div>
-  </div>
-
-  <section class="look-section">
-    <div class="section-head">
-      <div>
-        <h2>Tu look</h2>
-        <p>Camiseta arriba, pantalón en medio, zapatos abajo. Usa las flechas para cambiar cada prenda.</p>
+  <section class="dm-panel" id="dm-panel">
+    <div class="dm-toolbar">
+      <div class="dm-toolbar-left">
+        <button id="dm-filters-toggle" type="button" class="outline-btn" aria-expanded="false" aria-controls="dm-filters">
+          <Icon name="sliders" size={15} /> Filtros
+          <span id="dm-filter-count" class="dm-count hidden">0</span>
+        </button>
+        <span id="dm-counter" class="dm-counter">Cargando…</span>
       </div>
-      <button id="look-random" type="button" class="outline-btn">
-        <Icon name="shuffle" size={15} /> Probar al azar
+      <button id="dm-shuffle" type="button" class="primary-btn dm-shuffle">
+        <Icon name="shuffle" size={16} /> Mezclar
       </button>
     </div>
-    <div class="look-stack" id="look-stack"></div>
-  </section>
 
-  <div class="builder-layout">
-    <section>
-      <div class="section-head">
-        <div>
-          <h2>Tus prendas</h2>
-          <p id="counter">Cargando…</p>
+    <div class="dm-filters hidden" id="dm-filters">
+      <span class="dm-filter-label">TEMPORADA</span>
+      <div class="dm-chips" id="dm-seasons"></div>
+    </div>
+
+    <div class="dm-rows" id="dm-rows">
+      <div class="dm-row" data-row="top">
+        <div class="dm-row-head">
+          <span><b>SUPERIOR / ABRIGO</b><small>Camisetas, tops y chaquetas</small></span>
+          <span class="dm-row-count" id="dm-count-top">0</span>
         </div>
-        <button id="random-outfit" type="button" class="outline-btn">
-          <Icon name="shuffle" size={15} /> Outfit aleatorio
-        </button>
+        <div class="dm-track" id="dm-track-top" data-track="top"></div>
       </div>
-      <div class="picker-grid" id="picker"></div>
-      <div class="empty-state hidden" id="empty">
-        <span class="empty-icon"><Icon name="hanger" size={23} /></span>
-        <h3>Aún no hay prendas</h3>
-        <p>Primero añade algunas prendas a tu armario para poder combinarlas.</p>
-        <a href={`${base}armario/`} class="primary-btn">Ir al armario <Icon name="arrow" size={14} /></a>
+      <div class="dm-row" data-row="bottom">
+        <div class="dm-row-head">
+          <span><b>INFERIOR</b><small>Pantalones, faldas y vaqueros</small></span>
+          <span class="dm-row-count" id="dm-count-bottom">0</span>
+        </div>
+        <div class="dm-track" id="dm-track-bottom" data-track="bottom"></div>
       </div>
-    </section>
+      <div class="dm-row" data-row="shoes">
+        <div class="dm-row-head">
+          <span><b>CALZADO</b><small>Zapatos, zapatillas y botas</small></span>
+          <span class="dm-row-count" id="dm-count-shoes">0</span>
+        </div>
+        <div class="dm-track" id="dm-track-shoes" data-track="shoes"></div>
+      </div>
+      <div class="dm-row" data-row="accessory">
+        <div class="dm-row-head">
+          <span><b>ACCESORIO</b><small>Bolsos, cinturones y complementos</small></span>
+          <span class="dm-row-count" id="dm-count-accessory">0</span>
+        </div>
+        <div class="dm-track" id="dm-track-accessory" data-track="accessory"></div>
+      </div>
+    </div>
 
-    <aside class="outfit-preview">
-      <div class="preview-head">
-        <span>VISTA PREVIA</span>
-        <span id="selected-count">0 PRENDAS</span>
+    <div class="empty-state hidden" id="empty">
+      <span class="empty-icon"><Icon name="hanger" size={23} /></span>
+      <h3>Aún no hay prendas</h3>
+      <p>Primero añade algunas prendas a tu armario para poder mezclarlas.</p>
+      <a href={`${base}armario/`} class="primary-btn">Ir al armario <Icon name="arrow" size={14} /></a>
+    </div>
+
+    <div class="dm-bottom">
+      <div class="outfit-preview">
+        <div class="preview-head">
+          <span>TU LOOK</span>
+          <span id="selected-count">0 PRENDAS</span>
+        </div>
+        <div class="preview-collage" id="preview"></div>
       </div>
-      <div class="preview-collage" id="preview"></div>
-      <form class="save-form" id="save-form">
+      <form class="save-form dm-save" id="save-form">
         <label>
           <span>NOMBRE DEL LOOK</span>
           <input id="outfit-name" type="text" maxlength="50" placeholder="Viernes de oficina" />
         </label>
         <button id="save-outfit" type="submit" class="primary-btn full" disabled>Guardar outfit</button>
       </form>
-    </aside>
-  </div>
+    </div>
+  </section>
 
   <section class="section-block" style="margin-top:35px">
     <div class="section-head">
@@ -87,19 +105,48 @@ const base = import.meta.env.BASE_URL;
     <div class="empty-state hidden" id="no-outfits">
       <span class="empty-icon"><Icon name="layers" size={23} /></span>
       <h3>Sin outfits todavía</h3>
-      <p>Selecciona unas prendas a la izquierda y guarda tu primer look.</p>
+      <p>Mezcla un look arriba y pulsa «Guardar outfit».</p>
     </div>
   </section>
 
   <p id="saved-msg" class="hidden msg ok"></p>
 
   <script>
-    import { requireUser, supabaseConfigured, type Outfit, type Prenda } from '../lib/supabase';
+    import { requireUser, supabaseConfigured, TEMPORADAS, type Outfit, type Prenda } from '../lib/supabase';
     import { deleteOutfit, esc, fetchOutfits, fetchPrendas, insertOutfit } from '../lib/wardrobe';
 
-    const picker = document.getElementById('picker');
+    type FilaId = 'top' | 'bottom' | 'shoes' | 'accessory';
+
+    const FILAS: Record<FilaId, string[]> = {
+      top: ['superior', 'abrigo'],
+      bottom: ['inferior'],
+      shoes: ['calzado'],
+      accessory: ['accesorio'],
+    };
+    const FILA_DE: Record<string, FilaId> = {
+      superior: 'top',
+      abrigo: 'top',
+      inferior: 'bottom',
+      calzado: 'shoes',
+      accesorio: 'accessory',
+    };
+    const EMOJI: Record<string, string> = {
+      superior: '👕',
+      inferior: '👖',
+      abrigo: '🧥',
+      calzado: '👟',
+      accesorio: '🎒',
+    };
+
+    const panel = document.getElementById('dm-panel');
+    const rowsEl = document.getElementById('dm-rows');
     const empty = document.getElementById('empty');
-    const counter = document.getElementById('counter');
+    const counter = document.getElementById('dm-counter');
+    const chips = document.getElementById('dm-seasons');
+    const filterCount = document.getElementById('dm-filter-count');
+    const filters = document.getElementById('dm-filters');
+    const filtersToggle = document.getElementById('dm-filters-toggle') as HTMLButtonElement | null;
+    const shuffleButton = document.getElementById('dm-shuffle') as HTMLButtonElement | null;
     const preview = document.getElementById('preview');
     const selectedCount = document.getElementById('selected-count');
     const nameInput = document.getElementById('outfit-name') as HTMLInputElement | null;
@@ -113,6 +160,7 @@ const base = import.meta.env.BASE_URL;
     let prendas: Prenda[] = [];
     let outfits: Outfit[] = [];
     const seleccion = new Set<string>();
+    const temporadas = new Set<string>();
 
     const showError = (text: string) => {
       if (!errorEl) return;
@@ -128,54 +176,85 @@ const base = import.meta.env.BASE_URL;
       setTimeout(() => savedMsg.classList.add('hidden'), 4000);
     };
 
-    const renderPicker = () => {
-      if (!picker || !empty || !counter) return;
-      picker.innerHTML = prendas
-        .map((p) => {
-          const activa = seleccion.has(p.id);
-          return `
-          <button type="button" data-pick="${esc(p.id)}" class="picker-item${activa ? ' picked' : ''}">
-            <div class="picker-image">
-              ${
-                p.foto_url
-                  ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
-                  : `<span style="font-size:32px">${p.categoria === 'calzado' ? '👟' : p.categoria === 'inferior' ? '👖' : p.categoria === 'abrigo' ? '🧥' : p.categoria === 'accesorio' ? '🎒' : '👕'}</span>`
-              }
-              <span class="pick-check">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m5 12 4 4L19 6"/></svg>
-              </span>
-            </div>
-            <b>${esc(p.nombre)}</b>
-            <span>${esc(p.categoria)}</span>
-          </button>`;
-        })
-        .join('');
+    const visibles = () =>
+      prendas.filter((p) => {
+        if (!temporadas.size || temporadas.has('todo el año')) return true;
+        const temporada = (p.temporada ?? '').toLowerCase().trim();
+        return !temporada || temporada === 'todo el año' || temporadas.has(temporada);
+      });
 
-      empty.classList.toggle('hidden', prendas.length > 0);
-      counter.textContent = `${prendas.length} prendas disponibles`;
+    const ordenFila = (categoria: string) => {
+      const fila = FILA_DE[categoria] ?? 'accessory';
+      return (Object.keys(FILAS) as FilaId[]).indexOf(fila);
+    };
 
-      picker.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const id = button.dataset.pick!;
-          if (seleccion.has(id)) seleccion.delete(id);
-          else seleccion.add(id);
-          renderPicker();
-          renderPreview();
-          renderLook();
+    const renderChips = () => {
+      if (!chips) return;
+      chips.innerHTML = TEMPORADAS.map((t) => {
+        const activa = temporadas.has(t);
+        return `<button type="button" class="dm-chip${activa ? ' active' : ''}" data-temp="${esc(t)}" aria-pressed="${activa}">${activa ? '✓ ' : ''}${esc(t)}</button>`;
+      }).join('');
+
+      if (filterCount) {
+        filterCount.textContent = String(temporadas.size);
+        filterCount.classList.toggle('hidden', temporadas.size === 0);
+      }
+      chips.querySelectorAll<HTMLButtonElement>('[data-temp]').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          const temp = chip.dataset.temp!;
+          if (temporadas.has(temp)) temporadas.delete(temp);
+          else temporadas.add(temp);
+          renderChips();
+          renderTodo();
         });
+      });
+    };
+
+    const tarjeta = (p: Prenda) => {
+      const activa = seleccion.has(p.id);
+      return `<button type="button" data-dm-id="${esc(p.id)}" class="dm-card${activa ? ' picked' : ''}" aria-pressed="${activa}" title="${esc(p.nombre)}">
+        <span class="dm-card-photo">${
+          p.foto_url
+            ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
+            : `<span class="dm-emoji">${EMOJI[p.categoria] ?? '👕'}</span>`
+        }</span>
+        <span class="dm-card-name">${esc(p.nombre)}</span>
+        <span class="dm-card-cat">${esc(p.categoria)}</span>
+      </button>`;
+    };
+
+    const renderRows = () => {
+      const disponibles = visibles();
+      (Object.keys(FILAS) as FilaId[]).forEach((fila) => {
+        const track = document.getElementById(`dm-track-${fila}`);
+        const count = document.getElementById(`dm-count-${fila}`);
+        const opciones = disponibles.filter((p) => FILAS[fila].includes(p.categoria));
+        if (!track) return;
+        track.innerHTML = opciones.length
+          ? opciones.map(tarjeta).join('')
+          : '<span class="dm-row-empty">Sin prendas en esta fila</span>';
+        if (count) count.textContent = `${opciones.length}`;
+        const elegida = track.querySelector<HTMLElement>('.dm-card.picked');
+        if (elegida) {
+          track.scrollLeft = Math.max(0, elegida.offsetLeft - track.clientWidth / 2 + elegida.offsetWidth / 2);
+        }
       });
     };
 
     const renderPreview = () => {
       if (!preview || !saveButton || !selectedCount) return;
-      const elegidas = prendas.filter((p) => seleccion.has(p.id)).slice(0, 4);
+      const elegidas = prendas
+        .filter((p) => seleccion.has(p.id))
+        .sort((a, b) => ordenFila(a.categoria) - ordenFila(b.categoria))
+        .slice(0, 4);
+
       preview.classList.toggle('single', elegidas.length === 1);
       preview.innerHTML =
         elegidas.length === 0
           ? `<div class="preview-empty">
                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
-               <span>Sin prendas seleccionadas</span>
-               <small>Toca una prenda para verla aquí</small>
+               <span>Tu look está vacío</span>
+               <small>Toca una prenda o pulsa Mezclar</small>
              </div>`
           : elegidas
               .map(
@@ -184,7 +263,7 @@ const base = import.meta.env.BASE_URL;
                 ${
                   p.foto_url
                     ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
-                    : '<div style="font-size:30px">👕</div>'
+                    : `<div style="font-size:30px">${EMOJI[p.categoria] ?? '👕'}</div>`
                 }
                 <span>${esc(p.nombre)}</span>
               </div>`
@@ -195,105 +274,72 @@ const base = import.meta.env.BASE_URL;
       saveButton.disabled = seleccion.size === 0;
     };
 
-    const EMOJI: Record<string, string> = {
-      superior: '👕',
-      inferior: '👖',
-      abrigo: '🧥',
-      calzado: '👟',
-      accesorio: '🎒',
-    };
-
-    const renderLook = () => {
-      const stack = document.getElementById('look-stack');
-      if (!stack) return;
-      const categorias = ['abrigo', 'superior', 'inferior', 'calzado', 'accesorio'];
-      stack.innerHTML = categorias
-        .filter(
-          (cat) =>
-            cat === 'superior' || cat === 'inferior' || cat === 'calzado' || prendas.some((p) => p.categoria === cat)
-        )
-        .map((cat) => {
-          const opciones = prendas.filter((p) => p.categoria === cat);
-          const idx = opciones.findIndex((p) => seleccion.has(p.id));
-          const actual = idx >= 0 ? opciones[idx] : null;
-          const flechas = opciones.length < 2 ? 'disabled' : '';
-          return `
-          <div class="look-row">
-            <span class="look-label">${cat.toUpperCase()}</span>
-            <div class="look-line">
-              <button type="button" class="look-arrow" data-look-cat="${cat}" data-look-dir="-1" aria-label="Prenda anterior" ${flechas}>‹</button>
-              <div class="look-photo">
-                ${
-                  actual
-                    ? actual.foto_url
-                      ? `<img src="${esc(actual.foto_url)}" alt="${esc(actual.nombre)}" loading="lazy" />`
-                      : `<span style="font-size:44px">${EMOJI[cat] ?? '👕'}</span>`
-                    : `<span class="look-empty">${EMOJI[cat] ?? '👕'}<small>Añade una prenda</small></span>`
-                }
-              </div>
-              <button type="button" class="look-arrow" data-look-cat="${cat}" data-look-dir="1" aria-label="Prenda siguiente" ${flechas}>›</button>
-            </div>
-            <div class="look-caption"><b>${esc(actual?.nombre ?? 'Sin prenda')}</b><span>${idx >= 0 ? idx + 1 : 0}/${opciones.length}</span></div>
-          </div>`;
-        })
-        .join('');
-
-      stack.querySelectorAll<HTMLButtonElement>('[data-look-cat]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const cat = button.dataset.lookCat!;
-          const dir = Number(button.dataset.lookDir);
-          const opciones = prendas.filter((p) => p.categoria === cat);
-          if (!opciones.length) return;
-          const actual = opciones.findIndex((p) => seleccion.has(p.id));
-          const base = actual === -1 ? (dir > 0 ? -1 : 0) : actual;
-          const next = opciones[(base + dir + opciones.length) % opciones.length];
-          opciones.forEach((p) => seleccion.delete(p.id));
-          seleccion.add(next.id);
-          renderPicker();
-          renderPreview();
-          renderLook();
-        });
-      });
-    };
-
-    const generarLookAleatorio = () => {
-      if (!prendas.length) return showError('Añade prendas al armario para generar un look aleatorio.');
-
-      const elegidos: string[] = [];
-      const elegir = (categoria: string) => {
-        const opciones = prendas.filter((p) => p.categoria === categoria);
-        if (!opciones.length) return;
-        elegidos.push(opciones[Math.floor(Math.random() * opciones.length)].id);
-      };
-
-      ['superior', 'inferior', 'calzado'].forEach(elegir);
-      const extras = ['abrigo', 'accesorio'].filter((cat) =>
-        prendas.some((p) => p.categoria === cat)
-      );
-      if (extras.length) elegir(extras[Math.floor(Math.random() * extras.length)]);
-
-      if (elegidos.length < 4) {
-        const restantes = prendas
-          .filter((p) => !elegidos.includes(p.id))
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 4 - elegidos.length);
-        restantes.forEach((p) => elegidos.push(p.id));
+    const renderTodo = () => {
+      panel?.classList.toggle('hidden', prendas.length === 0);
+      empty?.classList.toggle('hidden', prendas.length > 0);
+      if (counter) {
+        counter.textContent = prendas.length
+          ? `${visibles().length} prendas · ${seleccion.size} en tu look`
+          : 'Cargando…';
       }
-
-      seleccion.clear();
-      elegidos.forEach((id) => seleccion.add(id));
-      if (nameInput && !nameInput.value.trim()) {
-        nameInput.value = `Look aleatorio ${new Date().toLocaleDateString('es-ES')}`;
-      }
-      renderPicker();
+      renderRows();
       renderPreview();
-      renderLook();
-      showSaved('Look aleatorio listo 🎲');
-      document.getElementById('look-stack')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
-    document.getElementById('random-outfit')?.addEventListener('click', generarLookAleatorio);
-    document.getElementById('look-random')?.addEventListener('click', generarLookAleatorio);
+    rowsEl?.addEventListener('click', (event) => {
+      const boton = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-dm-id]');
+      if (!boton) return;
+      const id = boton.dataset.dmId!;
+      if (seleccion.has(id)) {
+        seleccion.delete(id);
+      } else {
+        const prenda = prendas.find((p) => p.id === id);
+        const fila = prenda ? FILA_DE[prenda.categoria] : undefined;
+        if (fila) {
+          [...seleccion].forEach((otro) => {
+            const p = prendas.find((x) => x.id === otro);
+            if (p && FILA_DE[p.categoria] === fila) seleccion.delete(otro);
+          });
+        }
+        seleccion.add(id);
+      }
+      renderTodo();
+    });
+
+    const mezclar = () => {
+      if (!visibles().length) {
+        showError('Añade prendas al armario para poder mezclar un look.');
+        return;
+      }
+      const tracks = document.querySelectorAll<HTMLElement>('.dm-track');
+      tracks.forEach((track, i) => {
+        track.classList.remove('dm-flip');
+        void track.offsetWidth;
+        track.style.setProperty('--dm-delay', `${i * 70}ms`);
+        track.classList.add('dm-flip');
+      });
+      setTimeout(() => {
+        seleccion.clear();
+        (Object.keys(FILAS) as FilaId[]).forEach((fila) => {
+          const opciones = visibles().filter((p) => FILAS[fila].includes(p.categoria));
+          if (opciones.length) seleccion.add(opciones[Math.floor(Math.random() * opciones.length)].id);
+        });
+        if (nameInput && !nameInput.value.trim()) {
+          nameInput.value = `Look del ${new Date().toLocaleDateString('es-ES')}`;
+        }
+        renderTodo();
+        showSaved('Nuevo look listo 🎲');
+      }, 190);
+      setTimeout(() => tracks.forEach((track) => track.classList.remove('dm-flip')), 700);
+    };
+
+    shuffleButton?.addEventListener('click', mezclar);
+
+    filtersToggle?.addEventListener('click', () => {
+      const abrir = filters?.classList.contains('hidden') ?? false;
+      filters?.classList.toggle('hidden', !abrir);
+      filtersToggle.setAttribute('aria-expanded', String(abrir));
+    });
 
     const renderOutfits = () => {
       if (!listEl || !noOutfits) return;
@@ -303,18 +349,19 @@ const base = import.meta.env.BASE_URL;
           ? `<div class="outfit-thumb">${
               p.foto_url
                 ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nombre)}" loading="lazy" />`
-                : '<span style="font-size:24px">👕</span>'
+                : `<span style="font-size:24px">${EMOJI[p.categoria] ?? '👕'}</span>`
             }</div>`
           : '<div class="outfit-thumb empty-thumb" aria-hidden="true"></div>';
+
       listEl.innerHTML = outfits
         .map((o) => {
           const items = o.prenda_ids.map((id) => porId.get(id)).filter((p): p is Prenda => Boolean(p));
-          const visibles = items.slice(0, 4);
+          const visiblesItems = items.slice(0, 4);
           const fecha = new Date(o.creado_en).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
           return `
           <article class="outfit-card">
             <div class="outfit-collage">
-              ${Array.from({ length: 4 }, (_, i) => thumb(visibles[i])).join('')}
+              ${Array.from({ length: 4 }, (_, i) => thumb(visiblesItems[i])).join('')}
               ${items.length > 4 ? `<span class="more-count">+${items.length - 4}</span>` : ''}
             </div>
             <div class="outfit-info">
@@ -361,9 +408,7 @@ const base = import.meta.env.BASE_URL;
         outfits = [outfit, ...outfits];
         seleccion.clear();
         if (nameInput) nameInput.value = '';
-        renderPicker();
-        renderPreview();
-        renderLook();
+        renderTodo();
         renderOutfits();
         showSaved('Outfit guardado ✅');
       } catch (error) {
@@ -381,9 +426,8 @@ const base = import.meta.env.BASE_URL;
       try {
         const user = await requireUser();
         [prendas, outfits] = await Promise.all([fetchPrendas(user.id), fetchOutfits(user.id)]);
-        renderPicker();
-        renderPreview();
-        renderLook();
+        renderChips();
+        renderTodo();
         renderOutfits();
       } catch (error) {
         if ((error as Error).message !== 'Sesión no iniciada') showError((error as Error).message);
