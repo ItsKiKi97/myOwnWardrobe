@@ -85,10 +85,6 @@ const nav = [
               <Icon name="check" size={16} />
               <span id="sync-status">Modo invitado</span>
             </div>
-            <span class="avatar" id="user-avatar">?</span>
-            <button id="btn-logout-top" type="button" class="icon-btn hidden" title="Cerrar sesión" aria-label="Cerrar sesión">
-              <Icon name="logout" size={16} />
-            </button>
           </div>
         </header>
 
@@ -110,8 +106,6 @@ const nav = [
       const emailEl = document.getElementById('user-email');
       const loginEl = document.getElementById('btn-login');
       const logoutEl = document.getElementById('btn-logout');
-      const logoutTopEl = document.getElementById('btn-logout-top');
-      const avatarEl = document.getElementById('user-avatar');
       const syncEl = document.getElementById('sync-status');
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('sidebar-backdrop');
@@ -128,24 +122,19 @@ const nav = [
       const render = (email?: string | null) => {
         if (email) {
           if (emailEl) emailEl.textContent = email;
-          avatarEl!.textContent = email.charAt(0).toUpperCase();
           loginEl?.classList.add('hidden');
           logoutEl?.classList.remove('hidden');
-          logoutTopEl?.classList.remove('hidden');
           if (syncEl) syncEl.textContent = 'Sincronizado';
         } else {
           if (emailEl) emailEl.textContent = 'Sin iniciar sesión';
-          avatarEl!.textContent = '?';
           loginEl?.classList.remove('hidden');
           logoutEl?.classList.add('hidden');
-          logoutTopEl?.classList.add('hidden');
           if (syncEl) syncEl.textContent = 'Modo invitado';
         }
       };
 
       const doLogout = () => signOut().catch(() => {});
       logoutEl?.addEventListener('click', doLogout);
-      logoutTopEl?.addEventListener('click', doLogout);
 
       menuToggle?.addEventListener('click', () => setMenu(!sidebar?.classList.contains('show')));
       backdrop?.addEventListener('click', () => setMenu(false));
