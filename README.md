@@ -9,7 +9,9 @@ Hecha con **Astro + CSS propio (estilo MyOwnWardrobe) + Supabase**, hospedada gr
 - **Prendas con foto**: nombre, categoría, color y temporada. Las fotos se comprimen en el navegador antes de subirse.
 - **Quitar fondo**: opción al añadir/editar prenda que recorta la prenda en el navegador y guarda un PNG transparente (la primera vez descarga ~40 MB del modelo).
 - **Edición completa**: pulsa una tarjeta para cambiar cualquier campo o la foto.
-- **Outfits**: selecciona varias prendas, ponle nombre y guárdalo. Botón «Outfit aleatorio» que propone un look automáticamente.
+- **Dress Me**: 4 filas de prendas, botón «Mezclar» y filtros por temporada para crear looks.
+- **Confirmaciones dentro de la app**: al borrar prendas u outfits no aparece el diálogo del navegador, sino un modal propio.
+- **PWA instalable**: manifiesto, iconos y service worker; la interfaz abre offline. Los datos siguen necesitando conexión.
 - **Tema claro/oscuro** con preferencia guardada.
 - Cada usuario solo ve y borra sus propios datos (políticas RLS).
 
@@ -24,6 +26,7 @@ armario/
 │   ├── layouts/Layout.astro       # plantilla base con sidebar, topbar y sesión
 │   ├── lib/
 │   │   ├── supabase.ts            # cliente, sesión y tipos
+│   │   ├── confirm.ts             # modal de confirmación propio
 │   │   └── wardrobe.ts            # consultas, subida, compresión y recorte de fotos
 │   ├── pages/
 │   │   ├── index.astro            # portada
@@ -31,6 +34,10 @@ armario/
 │   │   ├── armario.astro          # prendas (alta, listado, filtros, borrado)
 │   │   └── outfits.astro          # combinar y guardar looks
 │   └── styles/global.css
+├── public/
+│   ├── manifest.webmanifest       # manifiesto PWA (iconos, nombre, atajos)
+│   ├── sw.js                      # service worker (app shell offline)
+│   ├── icon.svg / icon-192.png / icon-512.png
 ├── astro.config.mjs               # site/base calculados para GitHub Pages
 └── .env.example                   # variables de Supabase (copia a .env)
 ```
@@ -69,6 +76,19 @@ Abre <http://localhost:4321>. Para detener el servidor:
 ```powershell
 astro dev stop
 ```
+
+## PWA (instalar en el móvil)
+
+El service worker solo se registra en producción (o con `npm run preview`), para que no interfiera con el recarga en caliente de `npm run dev`. Para probarlo en local:
+
+```powershell
+npm run build
+npm run preview
+```
+
+En Chrome/Edge abre la URL, espera a que cargue y pulsa **Instalar aplicación** en la barra o en el menú del navegador. En iOS: **Compartir → Añadir a pantalla de inicio**.
+
+Lo que funciona offline es la interfaz (páginas, CSS, JS e iconos). Las prendas, fotos y outfits siguen viniendo de Supabase, así que necesitan conexión. El service worker nunca guarda peticiones de Supabase ni de Google Fonts.
 
 ## Publicar en GitHub Pages
 

@@ -113,6 +113,7 @@ const base = import.meta.env.BASE_URL;
 
   <script>
     import { requireUser, supabaseConfigured, TEMPORADAS, type Outfit, type Prenda } from '../lib/supabase';
+    import { confirmDialog } from '../lib/confirm';
     import { deleteOutfit, esc, fetchOutfits, fetchPrendas, insertOutfit } from '../lib/wardrobe';
 
     type FilaId = 'top' | 'bottom' | 'shoes' | 'accessory';
@@ -378,7 +379,7 @@ const base = import.meta.env.BASE_URL;
         button.addEventListener('click', async () => {
           const id = button.dataset.delOutfit!;
           const outfit = outfits.find((o) => o.id === id);
-          if (!outfit || !confirm(`¿Eliminar el outfit «${outfit.nombre}»?`)) return;
+          if (!outfit || !(await confirmDialog(`¿Eliminar el outfit «${outfit.nombre}»?`, { title: 'Eliminar outfit' }))) return;
           try {
             await deleteOutfit(id);
             outfits = outfits.filter((o) => o.id !== id);

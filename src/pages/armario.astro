@@ -120,6 +120,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
 
   <script>
     import { CATEGORIAS, requireUser, supabaseConfigured, type Categoria, type Prenda } from '../lib/supabase';
+    import { confirmDialog } from '../lib/confirm';
     import { deletePhoto, deletePrenda, esc, fetchPrendas, insertPrenda, quitarFondo, updatePrenda, uploadPhoto } from '../lib/wardrobe';
 
     const EMOJI: Record<Categoria, string> = {
@@ -316,7 +317,7 @@ import { CATEGORIAS, TEMPORADAS } from '../lib/supabase';
         button.addEventListener('click', async () => {
           const id = button.dataset.delete!;
           const prenda = prendas.find((p) => p.id === id);
-          if (!prenda || !confirm(`¿Eliminar «${prenda.nombre}»?`)) return;
+          if (!prenda || !(await confirmDialog(`¿Eliminar «${prenda.nombre}»?`, { title: 'Eliminar prenda' }))) return;
           try {
             await deletePrenda(prenda.id, prenda.foto_url);
             prendas = prendas.filter((p) => p.id !== prenda.id);

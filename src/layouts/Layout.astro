@@ -28,6 +28,11 @@ const nav = [
     <meta name="theme-color" content="#f7f6f2" />
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="manifest" href={`${base}manifest.webmanifest`} />
+    <link rel="apple-touch-icon" href={`${base}icon-192.png`} />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="MyOwnWardrobe" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <script is:inline>
       try {
         var saved = localStorage.getItem('mow-theme');
@@ -122,8 +127,21 @@ const nav = [
       </div>
     </div>
 
+    <div class="modal-backdrop hidden" id="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+      <div class="modal confirm-modal">
+        <div class="confirm-icon"><Icon name="trash" size={22} /></div>
+        <h2 id="confirm-title">¿Eliminar?</h2>
+        <p id="confirm-message"></p>
+        <div class="confirm-actions">
+          <button type="button" id="confirm-cancel" class="outline-btn">Cancelar</button>
+          <button type="button" id="confirm-accept" class="primary-btn danger-btn">Eliminar</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       import { getSupabase, signOut, supabaseConfigured } from '../lib/supabase';
+      import { setupConfirmDialog } from '../lib/confirm';
 
       const emailEl = document.getElementById('user-email');
       const loginEl = document.getElementById('btn-login');
@@ -228,6 +246,16 @@ const nav = [
         } catch (error) {
           console.error(error);
         }
+      }
+
+      setupConfirmDialog();
+
+      if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
+            .catch(() => {});
+        });
       }
     </script>
   </body>
